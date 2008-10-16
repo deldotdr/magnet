@@ -253,6 +253,9 @@ class AMQPService(service.Service):
         for name in self.tasks:
             reactor.callLater(0, self.startTask, name)
 
+    def addService(self, s):
+        self.addTask(s)
+
     def addTask(self, task):
         """ add a new task to the service
         """
