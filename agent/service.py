@@ -7,6 +7,7 @@ Messages will have:
 """
 
 import commands
+import urllib2
 
 from zope.interface import Interface
 
@@ -150,7 +151,7 @@ class ReportHostname(Task):
     def operation(self, *args):
         public_hostname = urllib2.urlopen(META_DATA_BASE + "public-hostname").read()
         instance_id = urllib2.urlopen(META_DATA_BASE + "instance-id").read()
-        content = {'hostname':this_hostname}
+        content = {'hostname':public_hostname, 'instance_id':instance_id}
         content = str(content)
         self.sendMessage(content)
 
