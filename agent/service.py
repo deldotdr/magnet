@@ -43,17 +43,6 @@ class BaseTask(object):
         self.queue = config['queue']
         self.operation = config['operation']
 
-    def startService(self):
-        service.Service.startService(self)
-        client = self.parent.client
-        getattr(self, 'start_%s' % self.type)(client)
-
-    def stopService(self):
-        service.Service.stopService(self)
-        if self.channel:
-            self.channel.channel_close()
-
-
     @defer.inlineCallbacks
     def start_consume(self, client):
         """start for consumer
@@ -107,16 +96,26 @@ class Task(service.Service, BaseTask):
         self.queue = config['queue']
         self.config = config
 
+    def startService(self):
+        self.running = true
+        client = self.parent.client
+        getattr(self, 'start_%s' % self.type)(client)
+
+    def stopService(self):
+        self.running = false
+        if self.channel:
+            self.channel.channel_close()
+
+
 
 class PeriodicTask(internet.TimerService, BaseTask):
 
-    topic = None
 
     def __init__(self, config):
         self.type = config['type']
         self.name = config['name']
         self.exchange = config['exchange']
-        self.routing_key = self.topic + config['base_routing_key']
+        self.routing_key = config['routing_key']
         self.queue = config['queue']
         self.period = config['period']
         self.content = config['content']
@@ -124,6 +123,7 @@ class PeriodicTask(internet.TimerService, BaseTask):
         internet.TimerService.__init__(self, self.period, self.operation)
 
     def startService(self):
+        self.running = true
         client = self.parent.client
         getattr(self, 'start_%s' % self.type)(client)
         internet.TimerService.startService(self)
@@ -137,7 +137,6 @@ class Status(Task):
 
     name = 'status'
     type = 'produce'
-    topic = 'status'
 
     def operation(self, *args):
         content = args[0]
@@ -147,17 +146,17 @@ class ReportHostname(Task):
 
     name = 'reporthostname'
     type = 'produce'
-    exchange = None
-    topic = 'status'
     queue = ''
 
-    def start(self, client):
+    def startService(self):
+        client = self.parent.client
         getattr(self, 'start_%s' % self.type)(client)
         reactor.callLater(0, self.operation)
 
     def operation(self, *args):
         public_hostname = urllib2.urlopen(META_DATA_BASE + "public-hostname").read()
         instance_id = urllib2.urlopen(META_DATA_BASE + "instance-id").read()
+        self.parent.instance_id = instance_id
         content = {'hostname':public_hostname, 'instance_id':instance_id}
         content = str(content)
         self.sendMessage(content)
@@ -170,8 +169,6 @@ class RunScript(Task):
 
     name = 'runscript'
     type = 'consume'
-    exchange = ''
-    topic = 'status'
     queue = ''
 
     def operation(self, *args):
@@ -179,7 +176,8 @@ class RunScript(Task):
         Receive script in message. Run script.
         """
         script = args[0]
-        status, output = commands.getstatusoutput(script)
+        cmd = write_script_file(script)
+        status, output = commands.getstatusoutput(cmd)
         msg = {'status':status, 'output':output}
         msg = str(msg)
         self.parent.getServiceNamed('status').sendMessage(msg)
@@ -188,7 +186,6 @@ class SendScript(Task):
 
     name = 'sendscript'
     type = 'produce'
-    topic = 'command'
     script_path = None
 
     def operation(self, *args):
@@ -222,6 +219,18 @@ def read_script_file(path):
     return s
 
 
+def write_script_file(script):
+    """write temp script file and return file name to be executed as a
+    command.
+    """
+    fname = 'remote_command.sh'
+    f = open(fname, 'w')
+    f.write(script)
+    f.close()
+    os.chmod(fname, 0755)
+    cmd = './' + fname
+    return cmd
+    
 
 
 
@@ -235,6 +244,7 @@ class AMQPService(service.MultiService):
     Channels can probably be dynamically created and closed.
     """
 
+    instance_id = None
 
     def __init__(self, config, tasks=None):
         service.MultiService.__init__(self)
@@ -253,9 +263,7 @@ class AMQPService(service.MultiService):
     def gotClient(self, client):
         yield client.start({"LOGIN":self.username, "PASSWORD":self.password})
         self.client = client
-        service.Service.startService(self)
-        for service in self:
-            service.startService()
+        service.MultiService.startService(self)
 
 
 

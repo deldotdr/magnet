@@ -23,22 +23,32 @@ config = {
 
 agent_service = AMQPService(config)
 
-config_task = {
-            'exchange':'provision',
-            'routing_key':'node.erddap',
-            'base_routing_key':'node.erddap',
-            'queue':'erddap',
+config_task_report = {
+            'exchange':'announce',
+            'routing_key':'erddap',
+            'queue':'erddap.announce',
             }
+
+config_task_status = {
+            'exchange':'status',
+            'routing_key':'erddap',
+            'queue':'erddap.status',
+            }
+
+config_task_runscript = {
+            'exchange':'command',
+            'routing_key':'erddap.runscript',
+            'queue':'erddap.runscript',
+            }
+
 
 task_report = ReportHostname(config_task)
 task_status =  Status(config_task)
 task_runscript = RunScript(config_task)
 
-
-
-agent_service.addService(task_status)
-agent_service.addService(task_report)
-agent_service.addService(task_runscript)
+task_status.setServiceParent(agent_service)
+task_report.setServiceParent(agent_service)
+task_runscript.setServiceParent(agent_service)
 
 
 application = service.Application('ContextAgent')
