@@ -6,6 +6,7 @@ Messages will have:
 
 """
 
+import os
 import commands
 import urllib2
 
