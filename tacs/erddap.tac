@@ -36,9 +36,9 @@ task_runscript = RunScript(config_task)
 
 
 
-agent_service.addService(ask_status)
-agent_service.addService(ask_report)
-agent_service.addService(ask_runscript)
+agent_service.addService(task_status)
+agent_service.addService(task_report)
+agent_service.addService(task_runscript)
 
 
 application = service.Application('ContextAgent')
