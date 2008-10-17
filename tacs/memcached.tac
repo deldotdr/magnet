@@ -26,6 +26,7 @@ ser = AMQPService(config)
 config_task = {
             'exchange':'provision',
             'routing_key':'node.memcached',
+            'base_routing_key':'node.memcached',
             'queue':'memcached',
             }
 

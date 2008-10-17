@@ -33,19 +33,23 @@ class BaseTask(object):
     and/or maybe filtering on a particular topic.
     """
     channel = None
+    topic = None
 
     def __init__(self, config):
         self.type = config['type']
         self.name = config['name']
         self.exchange = config['exchange']
-        self.routing_key = config['routing_key']
+        self.routing_key = self.topic + config['base_routing_key']
         self.queue = config['queue']
         self.operation = config['operation']
 
-    def start(self, client):
+    def startService(self):
+        service.Service.startService(self)
+        client = self.parent.client
         getattr(self, 'start_%s' % self.type)(client)
 
-    def stop(self):
+    def stopService(self):
+        service.Service.stopService(self)
         if self.channel:
             self.channel.channel_close()
 
@@ -106,21 +110,23 @@ class Task(service.Service, BaseTask):
 
 class PeriodicTask(internet.TimerService, BaseTask):
 
+    topic = None
+
     def __init__(self, config):
         self.type = config['type']
         self.name = config['name']
         self.exchange = config['exchange']
-        self.routing_key = config['routing_key']
+        self.routing_key = self.topic + config['base_routing_key']
         self.queue = config['queue']
         self.period = config['period']
         self.content = config['content']
         # self.operation = config['operation']
         internet.TimerService.__init__(self, self.period, self.operation)
 
-    def start(self, client):
-        # internet.TimerService.startService(self)
+    def startService(self):
+        client = self.parent.client
         getattr(self, 'start_%s' % self.type)(client)
-        self.startService()
+        internet.TimerService.startService(self)
 
     @defer.inlineCallbacks
     def operation(self, *args):
@@ -131,6 +137,7 @@ class Status(Task):
 
     name = 'status'
     type = 'produce'
+    topic = 'status'
 
     def operation(self, *args):
         content = args[0]
@@ -141,7 +148,7 @@ class ReportHostname(Task):
     name = 'reporthostname'
     type = 'produce'
     exchange = None
-    routing_key = ''
+    topic = 'status'
     queue = ''
 
     def start(self, client):
@@ -164,7 +171,7 @@ class RunScript(Task):
     name = 'runscript'
     type = 'consume'
     exchange = ''
-    routing_key = ''
+    topic = 'status'
     queue = ''
 
     def operation(self, *args):
@@ -181,6 +188,7 @@ class SendScript(Task):
 
     name = 'sendscript'
     type = 'produce'
+    topic = 'command'
     script_path = None
 
     def operation(self, *args):
@@ -192,12 +200,14 @@ class NodeStatusConsumer(Task):
 
     name = 'status'
     type = 'consumer'
+    topic = 'status'
 
 
 class SetupApps(Task):
 
     name = 'setupapps'
     type = 'produce'
+    topis = 'command'
     script_path = None
 
     def operation(self, *args):
@@ -212,7 +222,47 @@ def read_script_file(path):
     return s
 
 
-class AMQPService(service.Service):
+
+
+
+class AMQPService(service.MultiService):
+    """
+    A service needs a pre-configured client factory that it can use to make
+    clients.
+    Service needs to instantiate a client and then do stuff with that
+    client. The service may also be some kind of channel factory, as things
+    it does may have their own channels.
+    Channels can probably be dynamically created and closed.
+    """
+
+
+    def __init__(self, config, tasks=None):
+        service.MultiService.__init__(self)
+        self.host = config['host']
+        self.port = config['port']
+        self.exchange = config['exchange']
+        self.username = config['username']
+        self.password = config['password']
+        self.factory = AMQPClientFactory(config)
+        self.factory.onConn.addCallback(self.gotClient)
+
+    def startService(self):
+        reactor.connectTCP(self.host, self.port, self.factory)
+
+    @defer.inlineCallbacks
+    def gotClient(self, client):
+        yield client.start({"LOGIN":self.username, "PASSWORD":self.password})
+        self.client = client
+        service.Service.startService(self)
+        for service in self:
+            service.startService()
+
+
+
+
+
+
+class xxAMQPService(service.Service):
     """
     A service needs a pre-configured client factory that it can use to make
     clients.
@@ -284,78 +334,5 @@ class AMQPService(service.Service):
         """
         if self.tasks.has_key(name):
             self.tasks[name].stop()
-
-
-
-class xxAMQPService(service.MultiService):
-    """
-    A service needs a pre-configured client factory that it can use to make
-    clients.
-    Service needs to instantiate a client and then do stuff with that
-    client. The service may also be some kind of channel factory, as things
-    it does may have their own channels.
-    Channels can probably be dynamically created and closed.
-    """
-
-
-    def __init__(self, config, tasks=None):
-        self.host = config['host']
-        self.port = config['port']
-        self.exchange = config['exchange']
-        self.username = config['username']
-        self.password = config['password']
-        self.factory = AMQPClientFactory(config)
-        self.factory.onConn.addCallback(self.gotClient)
-        self.tasks = tasks or {}
-
-    def startService(self):
-        # service.Service.startService(self)
-        reactor.connectTCP(self.host, self.port, self.factory)
-
-    @defer.inlineCallbacks
-    def gotClient(self, client):
-        yield client.start({"LOGIN":self.username, "PASSWORD":self.password})
-        channel = yield client.newChannel()
-        yield channel.channel_open()
-        yield channel.exchange_declare(exchange=self.exchange, type="topic", auto_delete=True)
-
-        content = Content("Message Service: Server Greeting OK")
-        channel.basic_publish(exchange=self.exchange,
-            routing_key='test', content=content)
-
-        yield channel.channel_close(reply_code=200, reply_text="Ok")
-
-        self.client = client
-        for service in self:
-            service.startService()
-
-    def addTask(self, task):
-        """ add a new task to the service
-        """
-        name = task.name
-        if self.tasks.has_key(name):
-            raise KeyError('remove %s first' % name)
-        self.tasks[task.name] = task
-        if self.running:
-            self.startTask(name)
-
-    def removeTask(self, name):
-        """remove task by name from the service
-        """
-
-
-    def startTask(self, name):
-        """
-        start a sub service
-        """
-        if self.tasks.has_key(name):
-            self.tasks[name].start(self.client)
-
-    def stopTask(self, name):
-        """stop a task by name
-        """
-        if self.tasks.has_key(name):
-            self.tasks[name].stop()
-
 
 
