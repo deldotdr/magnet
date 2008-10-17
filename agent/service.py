@@ -97,12 +97,12 @@ class Task(service.Service, BaseTask):
         self.config = config
 
     def startService(self):
-        self.running = true
+        self.running = True
         client = self.parent.client
         getattr(self, 'start_%s' % self.type)(client)
 
     def stopService(self):
-        self.running = false
+        self.running = False
         if self.channel:
             self.channel.channel_close()
 
@@ -123,7 +123,7 @@ class PeriodicTask(internet.TimerService, BaseTask):
         internet.TimerService.__init__(self, self.period, self.operation)
 
     def startService(self):
-        self.running = true
+        self.running = True
         client = self.parent.client
         getattr(self, 'start_%s' % self.type)(client)
         internet.TimerService.startService(self)
