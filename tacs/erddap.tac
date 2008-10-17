@@ -42,9 +42,9 @@ config_task_runscript = {
             }
 
 
-task_report = ReportHostname(config_task)
-task_status =  Status(config_task)
-task_runscript = RunScript(config_task)
+task_report = ReportHostname(config_task_report)
+task_status =  Status(config_task_status)
+task_runscript = RunScript(config_task_runscript)
 
 task_status.setServiceParent(agent_service)
 task_report.setServiceParent(agent_service)
