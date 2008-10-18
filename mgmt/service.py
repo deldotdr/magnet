@@ -37,7 +37,7 @@ class Unit(AMQPService):
     reservation = None
 
     def __init__(self, config, ec2):
-        config = default_AMI_config.update(config)
+        # config = default_AMI_config.update(config)
         self.config = config
         AMQPService.__init__(self, config)
         self.ec2 = ec2

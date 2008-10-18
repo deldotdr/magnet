@@ -17,9 +17,13 @@ erddap_util_config = {
         'ami_id':'ami-b62acedf',
         'num_insts':2,
         'host':'rabbitmq.amoeba.ucsd.edu',
+        'port':5672,
+        'vhost':'/',
+        'username':'guest',
+        'password':'guest',
         }
  
-erddap_crawl = Unit(erddap_util_config)
+erddap_crawl = Unit(erddap_util_config, ec2)
 
 
 
