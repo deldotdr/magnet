@@ -21,6 +21,7 @@ erddap_util_config = {
         'vhost':'/',
         'username':'guest',
         'password':'guest',
+        'spec':spec_path,
         }
  
 erddap_crawl = Unit(erddap_util_config, ec2)

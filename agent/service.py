@@ -211,7 +211,7 @@ class TopicCommandProducer(Task):
 class TopicConsumer(Task):
 
     name = 'status'
-    type = 'consumer'
+    type = 'consume'
     exchange = 'status'
 
     def operation(self, *args):
