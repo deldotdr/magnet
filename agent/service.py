@@ -92,9 +92,10 @@ class Task(service.Service, BaseTask):
     type = None
 
     def __init__(self, config):
-        self.exchange = config['exchange']
-        self.routing_key = config['routing_key']
-        self.queue = config['queue']
+        # self.routing_key = config['routing_key']
+        self.routing_key = config['node_type']
+        # self.queue = config['routing_key']
+        self.queue = config['node_type']
         self.config = config
 
     def startService(self):
@@ -137,6 +138,7 @@ class PeriodicTask(internet.TimerService, BaseTask):
 class Status(Task):
 
     name = 'status'
+    exchange = 'status'
     type = 'produce'
 
     def operation(self, *args):
@@ -147,7 +149,7 @@ class ReportHostname(Task):
 
     name = 'reporthostname'
     type = 'produce'
-    queue = ''
+    exchange = 'status'
 
     def startService(self):
         client = self.parent.client
@@ -170,6 +172,7 @@ class RunScript(Task):
 
     name = 'runscript'
     type = 'consume'
+    exchange = 'command'
     queue = ''
 
     def operation(self, *args):
@@ -193,13 +196,27 @@ class SendScript(Task):
         script = read_script_file(self.script_path)
         self.sendMessage(script)
 
+class TopicCommandProducer(Task):
 
-class NodeStatusConsumer(Task):
+    name = 'runscript'
+    type = 'produce'
+    exchange = 'command'
+    script_path = None
+
+    def operation(self, *args):
+        script = read_script_file(self.script_path)
+        self.sendMessage(script)
+
+
+class TopicConsumer(Task):
 
     name = 'status'
     type = 'consumer'
-    topic = 'status'
+    exchange = 'status'
 
+    def operation(self, *args):
+        msg = args[0]
+        print msg
 
 class SetupApps(Task):
 
@@ -247,11 +264,10 @@ class AMQPService(service.MultiService):
 
     instance_id = None
 
-    def __init__(self, config, tasks=None):
+    def __init__(self, config):
         service.MultiService.__init__(self)
         self.host = config['host']
         self.port = config['port']
-        self.exchange = config['exchange']
         self.username = config['username']
         self.password = config['password']
         self.factory = AMQPClientFactory(config)
@@ -269,79 +285,5 @@ class AMQPService(service.MultiService):
 
 
 
-
-
-class xxAMQPService(service.Service):
-    """
-    A service needs a pre-configured client factory that it can use to make
-    clients.
-    Service needs to instantiate a client and then do stuff with that
-    client. The service may also be some kind of channel factory, as things
-    it does may have their own channels.
-    Channels can probably be dynamically created and closed.
-    """
-
-
-    def __init__(self, config, tasks=None):
-        self.host = config['host']
-        self.port = config['port']
-        self.exchange = config['exchange']
-        self.username = config['username']
-        self.password = config['password']
-        self.factory = AMQPClientFactory(config)
-        self.factory.onConn.addCallback(self.gotClient)
-        self.tasks = tasks or {}
-
-    def startService(self):
-        service.Service.startService(self)
-        reactor.connectTCP(self.host, self.port, self.factory)
-
-    @defer.inlineCallbacks
-    def gotClient(self, client):
-        yield client.start({"LOGIN":self.username, "PASSWORD":self.password})
-        channel = yield client.newChannel()
-        yield channel.channel_open()
-        yield channel.exchange_declare(exchange=self.exchange, type="topic", auto_delete=True)
-
-        content = Content("Message Service: Server Greeting OK")
-        channel.basic_publish(exchange=self.exchange,
-            routing_key='test', content=content)
-
-        yield channel.channel_close(reply_code=200, reply_text="Ok")
-
-        self.client = client
-        for name in self.tasks:
-            reactor.callLater(0, self.startTask, name)
-
-    def addService(self, s):
-        self.addTask(s)
-
-    def addTask(self, task):
-        """ add a new task to the service
-        """
-        name = task.name
-        if self.tasks.has_key(name):
-            raise KeyError('remove %s first' % name)
-        self.tasks[task.name] = task
-        if self.running:
-            self.startTask(name)
-
-    def removeTask(self, name):
-        """remove task by name from the service
-        """
-
-
-    def startTask(self, name):
-        """
-        start a sub service
-        """
-        if self.tasks.has_key(name):
-            self.tasks[name].start(self.client)
-
-    def stopTask(self, name):
-        """stop a task by name
-        """
-        if self.tasks.has_key(name):
-            self.tasks[name].stop()
 
 

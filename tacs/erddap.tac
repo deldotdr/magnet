@@ -13,7 +13,6 @@ spec_path = magnet.__path__[0] + '/amqp0-8.xml'
 config = {
         'host':'rabbitmq.amoeba.ucsd.edu',
         'port':5672,
-        'exchange':'provision',
         'vhost':'/',
         'spec':spec_path,
         'username':'guest',
@@ -24,21 +23,21 @@ config = {
 agent_service = AMQPService(config)
 
 config_task_report = {
-            'exchange':'announce',
+            'exchange':'status',
             'routing_key':'erddap',
-            'queue':'erddap.announce',
+            'queue':'erddap',
             }
 
 config_task_status = {
             'exchange':'status',
             'routing_key':'erddap',
-            'queue':'erddap.status',
+            'queue':'erddap',
             }
 
 config_task_runscript = {
             'exchange':'command',
-            'routing_key':'erddap.runscript',
-            'queue':'erddap.runscript',
+            'routing_key':'erddap',
+            'queue':'erddap',
             }
 
 
