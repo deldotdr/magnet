@@ -23,7 +23,7 @@ class Provisioner(service.MultiService):
 default_AMI_config = {
         'node_type':None,
         'ami_id':None,
-        'num_insts':None
+        'num_insts':None,
         'host':None,
         'port':5672,
         'vhost':'/',
