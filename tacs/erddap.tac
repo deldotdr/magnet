@@ -25,18 +25,21 @@ agent_service = AMQPService(config)
 config_task_report = {
             'exchange':'status',
             'routing_key':'erddap',
+            'node_type':'erddap',
             'queue':'erddap',
             }
 
 config_task_status = {
             'exchange':'status',
             'routing_key':'erddap',
+            'node_type':'erddap',
             'queue':'erddap',
             }
 
 config_task_runscript = {
             'exchange':'command',
             'routing_key':'erddap',
+            'node_type':'erddap',
             'queue':'erddap',
             }
 
