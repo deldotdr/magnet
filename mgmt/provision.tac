@@ -16,7 +16,7 @@ erddap_util_config = {
         'node_type':'erddap_crawl',
         'ami_id':'ami-b62acedf',
         'num_insts':2,
-        'mgmt_host':'rabbitmq.amoeba.ucsd.edu',
+        'host':'rabbitmq.amoeba.ucsd.edu',
         }
  
 erddap_crawl = Unit(erddap_util_config)
