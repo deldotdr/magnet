@@ -231,8 +231,7 @@ class Unit(AMQPService):
             for k,v in node_config_dict.iteritems():
                 if v[:4] == 'get_':
                     node_to_get = v[4:]
-                    new_v =
-                    self.parent.getServiceNamed(node_to_get).get_private_dns_name()
+                    new_v = self.parent.getServiceNamed(node_to_get).get_private_dns_name()
                     node_config_dict[k] = new_v
 
 
