@@ -39,8 +39,8 @@ config = {
 
 agent_service = AMQPService(config)
 
-config_task_report = {
-            'exchange':'status',
+config_task_announce = {
+            'exchange':'announce',
             'routing_key':node_type,
             'node_type':node_type,
             'queue':node_type,
@@ -69,13 +69,13 @@ config_task_consume_config_dict = {
 
 
 
-task_report = ReportHostname(config_task_report)
+task_announce = ReportHostname(config_task_announce)
 task_status =  Status(config_task_status)
 task_runscript = RunScript(config_task_runscript)
 task_config_dict = ConfigDictConsumer(config_task_consume_config_dict)
 
+task_announce.setServiceParent(agent_service)
 task_status.setServiceParent(agent_service)
-task_report.setServiceParent(agent_service)
 task_runscript.setServiceParent(agent_service)
 task_config_dict.setServiceParent(agent_service)
 

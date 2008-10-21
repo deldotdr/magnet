@@ -79,7 +79,7 @@ default_AMI_config = {
 class InstanceAnnounceConsumer(TopicConsumer):
 
     name = 'inst_ann_consumer'
-    exchange = 'status'
+    exchange = 'announce'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -115,6 +115,7 @@ class RunAppResponseConsumer(TopicConsumer):
 class ConfigDictCommandProducer(TopicCommandProducer):
 
     name = 'config_dict'
+    exchange = 'config_dict'
 
     def operation(self, *args):
         """

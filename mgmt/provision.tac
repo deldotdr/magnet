@@ -1,4 +1,6 @@
 
+import os
+import sys
 import boto
 
 from twisted.application import service
@@ -9,7 +11,14 @@ spec_path = magnet.__path__[0] + '/amqp0-8.xml'
 from magnet.mgmt.service import Unit
 from magnet.mgmt.service import Provisioner
 
-ec2 = boto.connect_ec2("1XE4TR2G8BCV1NEKVRR2", "aAjco0GQRbFud7A9uHjNH4h5ZQUnm0j9iio9Brfr")
+AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+
+if AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY:
+    ec2 = boto.connect_ec2(AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY)
+else:
+    print 'Need AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY environment variables'
+    sys.exit(1)
 
 
 erddap_util_config_config = {

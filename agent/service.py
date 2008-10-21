@@ -1,9 +1,6 @@
 """
-Consume messages from crawler/fetcher erddap nodes.
-Messages will have:
-    datasetId
-    diff (yes/no)
-
+Every messaging task is a Service.
+Every Task has a amqp channel.
 """
 
 import os
@@ -42,11 +39,11 @@ class BaseTask(object):
         """
         channel = yield client.newChannel()
         yield channel.channel_open()
-        yield channel.queue_declare(queue=self.queue)
-        yield channel.queue_bind(queue=self.queue,
+        reply = yield channel.queue_declare()
+        yield channel.queue_bind(queue=reply.queue,
                                 exchange=self.exchange,
                                 routing_key=self.routing_key)
-        yield channel.basic_consume(queue=self.queue)
+        yield channel.basic_consume(queue=reply.queue)
         channel.deferred.addCallback(self.gotMessage)
         self.channel = channel
         defer.returnValue(channel)
@@ -61,7 +58,8 @@ class BaseTask(object):
     def sendMessage(self, content):
         content = Content(content)
         yield self.channel.channel_open()
-        yield self.channel.exchange_declare(exchange=self.exchange, type="topic", auto_delete=True)
+        # yield self.channel.exchange_declare(exchange=self.exchange, type="topic", auto_delete=True)
+        yield self.channel.exchange_declare(exchange=self.exchange, type="topic")
         self.channel.basic_publish(exchange=self.exchange,
             routing_key=self.routing_key, content=content)
         yield self.channel.channel_close(reply_code=200, reply_text="Ok")
@@ -155,11 +153,12 @@ class ReportHostname(Task):
         self.parent.instance_id = instance_id
         self.parent.public_dns_name = public_dns_name
         self.parent.private_dns_name = private_dns_name
-        content = {
-                'public_dns_name':public_dns_name,
-                'private_dns_name':private_dns_name,
-                'instance_id':instance_id}
-        content = str(content)
+#        content = {
+#                'public_dns_name':public_dns_name,
+#                'private_dns_name':private_dns_name,
+#                'instance_id':instance_id}
+#         content = str(content)
+        content = instance_id
         self.sendMessage(content)
 
 
@@ -229,9 +228,12 @@ class SetupApps(Task):
         self.sendMessage(script)
 
 class ConfigDictConsumer(Task):
+    """Agents accept a message containing a dictionary of config options.
+    Update the dictionary with the nodes public and private dns names
+    """
 
     name = 'config_dict'
-    name = 'config_dict'
+    exchange = 'config_dict'
     type = 'consume'
 
     def operation(self, *args):
@@ -243,7 +245,7 @@ class ConfigDictConsumer(Task):
             'private_dns_name':private_dns_name,
             })
         self.config_dict = config_dict
-        self.sendMessage(self.parent.instance_id)
+        self.parent.getServiceNamed('status').sendMessage(self.parent.instance_id)
 
 
 
