@@ -218,6 +218,7 @@ class Unit(AMQPService):
     def startLoadApp(self):
         """send command to download and install apps to units who need it
         """
+        print 'Start Load App for Unit ', self.name
         load_app_script = self.config['load_app_script']
         if load_app_script:
             LoadAppResponseConsumer({'node_type':self.node_type}).setServiceParent(self)
