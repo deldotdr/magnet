@@ -35,7 +35,7 @@ class Provisioner(service.MultiService):
 
     def setUnitReadyForRunApp(self, unit_name):
         self.units_ready_for_run_app += 1
-        if  self.units_ready_for_run_app = self.num_units:
+        if  self.units_ready_for_run_app == self.num_units:
             self.startRunAppPhase()
 
     def finishUnitStartupPhase(self):
