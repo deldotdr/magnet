@@ -56,6 +56,12 @@ class BaseTask(object):
 
     @defer.inlineCallbacks
     def sendMessage(self, content):
+        print '--------------------begin'
+        print 'sendMessage ', content
+        print 'Task ', self.name
+        print 'Exchange ', self.exchange
+        print 'routing key ', self.routing_key
+        print '---------------------end'
         content = Content(content)
         yield self.channel.channel_open()
         # yield self.channel.exchange_declare(exchange=self.exchange, type="topic", auto_delete=True)
@@ -66,6 +72,12 @@ class BaseTask(object):
 
 
     def gotMessage(self, msg):
+        print '--------------------begin'
+        print 'gotMessage ', msg
+        print 'Task ', self.name
+        print 'Exchange ', self.exchange
+        print 'routing key ', self.routing_key
+        print '---------------------end'
         self.operation(msg.content.body)
         self.channel.basic_ack(delivery_tag=msg.delivery_tag)
         self.channel.deferred.addCallback(self.gotMessage)

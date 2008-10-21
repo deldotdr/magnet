@@ -26,6 +26,8 @@ spec_path = magnet.__path__[0] + '/amqp0-8.xml'
 node_type = 'bad-user-data'
 node_type = urllib2.urlopen(INSTANCE_DATA_BASE_URL + 'user-data').read()
 
+print 'Node_type (from user data): ', node_type
+
 # Client config object
 config = {
         'host':'rabbitmq.amoeba.ucsd.edu',
