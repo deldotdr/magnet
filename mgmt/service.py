@@ -175,8 +175,8 @@ class Unit(AMQPService):
         self.reservation = self.ec2.run_instances(ami_id, min_count=N,
                 max_count=N, user_data=user_data)
         InstanceAnnounceConsumer({'node_type':node_type, 'routing_key':'*'}).setServiceParent(self)
-        TopicCommandProducer({'node_type':node_type}).setServiceParent(self)
-        ConfigDictCommandProducer({'node_type':node_type}).setServiceParent(self)
+        TopicCommandProducer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
+        ConfigDictCommandProducer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
         AMQPService.startService(self)
 
     def stopService(self):
