@@ -18,7 +18,7 @@ from qpid.content import Content
 
 from magnet.agent.amqp import AMQPClientFactory
 
-INSTANCE_DATA_BASE_URL = 'http://169.254.169.254/latest/meta-data/'
+INSTANCE_DATA_BASE_URL = 'http://169.254.169.254/latest/'
 
 class ITask(Interface):
     pass
@@ -144,8 +144,8 @@ class ReportHostname(Task):
         reactor.callLater(0, self.operation)
 
     def operation(self, *args):
-        public_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "public-hostname").read()
-        private_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "local-hostname").read()
+        public_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/public-hostname").read()
+        private_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/local-hostname").read()
         instance_id = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "instance-id").read()
         self.parent.instance_id = instance_id
         self.parent.public_dns_name = public_dns_name
