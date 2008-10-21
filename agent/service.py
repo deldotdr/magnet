@@ -82,10 +82,7 @@ class Task(service.Service, BaseTask):
     def __init__(self, config):
         # self.exchange = config['exchange']
         self.node_type = config['node_type']
-        # self.routing_key = config['routing_key']
-        self.routing_key = config['node_type']
-        # self.queue = config['routing_key']
-        self.queue = config['node_type']
+        self.routing_key = config['routing_key']
         self.config = config
 
     def startService(self):
@@ -139,7 +136,7 @@ class ReportHostname(Task):
 
     name = 'reporthostname'
     type = 'produce'
-    exchange = 'status'
+    exchange = 'announce'
 
     def startService(self):
         client = self.parent.client

@@ -43,28 +43,24 @@ config_task_announce = {
             'exchange':'announce',
             'routing_key':node_type,
             'node_type':node_type,
-            'queue':node_type,
             }
 
 config_task_status = {
             'exchange':'status',
             'routing_key':node_type,
             'node_type':node_type,
-            'queue':node_type,
             }
 
 config_task_runscript = {
             'exchange':'command',
             'routing_key':node_type,
             'node_type':node_type,
-            'queue':node_type,
             }
 
 config_task_consume_config_dict = {
             'exchange':'config_dict',
             'routing_key':node_type,
             'node_type':node_type,
-            'queue':node_type,
             }
 
 
