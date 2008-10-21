@@ -146,7 +146,7 @@ class ReportHostname(Task):
     def operation(self, *args):
         public_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/public-hostname").read()
         private_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/local-hostname").read()
-        instance_id = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "instance-id").read()
+        instance_id = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/instance-id").read()
         self.parent.instance_id = instance_id
         self.parent.public_dns_name = public_dns_name
         self.parent.private_dns_name = private_dns_name
