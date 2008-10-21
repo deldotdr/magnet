@@ -21,7 +21,7 @@ from qpid.content import Content
 
 from magnet.agent.amqp import AMQPClientFactory
 
-META_DATA_BASE = 'http://169.254.169.254/latest/meta-data/'
+INSTANCE_DATA_BASE_URL = 'http://169.254.169.254/latest/meta-data/'
 
 class ITask(Interface):
     pass
@@ -35,14 +35,6 @@ class BaseTask(object):
     """
     channel = None
     topic = None
-
-    def __init__(self, config):
-        self.type = config['type']
-        self.name = config['name']
-        self.exchange = config['exchange']
-        self.routing_key = self.topic + config['base_routing_key']
-        self.queue = config['queue']
-        self.operation = config['operation']
 
     @defer.inlineCallbacks
     def start_consume(self, client):
@@ -92,6 +84,8 @@ class Task(service.Service, BaseTask):
     type = None
 
     def __init__(self, config):
+        self.exchange = config['exchange']
+        self.node_type = config['node_type']
         # self.routing_key = config['routing_key']
         self.routing_key = config['node_type']
         # self.queue = config['routing_key']
@@ -157,10 +151,16 @@ class ReportHostname(Task):
         reactor.callLater(0, self.operation)
 
     def operation(self, *args):
-        public_hostname = urllib2.urlopen(META_DATA_BASE + "public-hostname").read()
-        instance_id = urllib2.urlopen(META_DATA_BASE + "instance-id").read()
+        public_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "public-hostname").read()
+        private_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "local-hostname").read()
+        instance_id = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "instance-id").read()
         self.parent.instance_id = instance_id
-        content = {'hostname':public_hostname, 'instance_id':instance_id}
+        self.parent.public_dns_name = public_dns_name
+        self.parent.private_dns_name = private_dns_name
+        content = {
+                'public_dns_name':public_dns_name,
+                'private_dns_name':private_dns_name,
+                'instance_id':instance_id}
         content = str(content)
         self.sendMessage(content)
 
@@ -222,12 +222,31 @@ class SetupApps(Task):
 
     name = 'setupapps'
     type = 'produce'
-    topis = 'command'
+    topic = 'command'
     script_path = None
 
     def operation(self, *args):
         script = read_script_file(self.script_path)
         self.sendMessage(script)
+
+class ConfigDictConsumer(Task):
+
+    name = 'config_dict'
+    type = 'consume'
+    topic = 'config_dict'
+
+    def operation(self, *args):
+        config_dict = eval(args[0])
+        public_dns_name = self.parent.public_dns_name
+        private_dns_name = self.parent.private_dns_name
+        config_dict.update({
+            'public_dns_name':public_dns_name,
+            'private_dns_name':private_dns_name,
+            })
+        self.config_dict = config_dict
+        self.sendMessage(self.parent.instance_id)
+
+
 
 
 def read_script_file(path):
@@ -241,12 +260,13 @@ def write_script_file(script):
     """write temp script file and return file name to be executed as a
     command.
     """
-    fname = 'remote_command.sh'
+    home = os.getenv('HOME')
+    fname = os.path.join(home,'remote_command.sh')
     f = open(fname, 'w')
     f.write(script)
     f.close()
     os.chmod(fname, 0755)
-    cmd = './' + fname
+    cmd = fname
     return cmd
     
 
