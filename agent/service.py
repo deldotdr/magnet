@@ -84,7 +84,7 @@ class Task(service.Service, BaseTask):
     type = None
 
     def __init__(self, config):
-        self.exchange = config['exchange']
+        # self.exchange = config['exchange']
         self.node_type = config['node_type']
         # self.routing_key = config['routing_key']
         self.routing_key = config['node_type']
@@ -189,6 +189,7 @@ class RunScript(Task):
 class SendScript(Task):
 
     name = 'sendscript'
+    exchange = ''
     type = 'produce'
     script_path = None
 
@@ -232,8 +233,8 @@ class SetupApps(Task):
 class ConfigDictConsumer(Task):
 
     name = 'config_dict'
+    name = 'config_dict'
     type = 'consume'
-    topic = 'config_dict'
 
     def operation(self, *args):
         config_dict = eval(args[0])

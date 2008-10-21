@@ -79,6 +79,7 @@ default_AMI_config = {
 class InstanceAnnounceConsumer(TopicConsumer):
 
     name = 'inst_ann_consumer'
+    exchange = 'status'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -87,6 +88,7 @@ class InstanceAnnounceConsumer(TopicConsumer):
 class LoadAppResponseConsumer(TopicConsumer):
 
     name = 'load_app_resp_consumer'
+    exchange = 'status'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -95,6 +97,7 @@ class LoadAppResponseConsumer(TopicConsumer):
 class ConfigAppResponseConsumer(TopicConsumer):
 
     name = 'config_app_resp_consumer'
+    exchange = 'status'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -103,6 +106,7 @@ class ConfigAppResponseConsumer(TopicConsumer):
 class RunAppResponseConsumer(TopicConsumer):
 
     name = 'run_app_resp_consumer'
+    exchange = 'status'
 
     def operation(self, *args):
         instance_id = args[0]
