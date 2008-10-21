@@ -74,7 +74,7 @@ erddap_crawl_config = {
 
 
 
-erddap_crawl = Unit(erddap_util_config, ec2)
+erddap_crawl = Unit(erddap_crawl_config, ec2)
 
 
 run_memcached_script = spec_path + '/scripts/run_memcached.sh'
