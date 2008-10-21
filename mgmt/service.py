@@ -83,7 +83,7 @@ class InstanceAnnounceConsumer(TopicConsumer):
 
     def operation(self, *args):
         instance_id = args[0]
-        self.parent.setInstacnceConfirmOn(instance_id)
+        self.parent.setInstanceConfirmOn(instance_id)
 
 class LoadAppResponseConsumer(TopicConsumer):
 

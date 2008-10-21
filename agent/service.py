@@ -53,7 +53,6 @@ class BaseTask(object):
 
     @defer.inlineCallbacks
     def start_produce(self, client):
-        print 'start produce'
         channel = yield client.newChannel()
         self.channel = channel
         defer.returnValue(channel)
