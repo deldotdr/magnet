@@ -68,7 +68,6 @@ class BaseTask(object):
 
 
     def gotMessage(self, msg):
-        print "Task ", self.name, "gotMessage", msg.content.body
         self.operation(msg.content.body)
         self.channel.basic_ack(delivery_tag=msg.delivery_tag)
         self.channel.deferred.addCallback(self.gotMessage)
