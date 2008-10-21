@@ -18,7 +18,7 @@ class Provisioner(service.MultiService):
 
     """
 
-    units_ready_for_loadd_app = 0
+    units_ready_for_load_app = 0
     units_ready_for_config_app = 0
     units_ready_for_run_app = 0
     num_units = 0
