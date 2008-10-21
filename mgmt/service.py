@@ -80,7 +80,6 @@ class InstanceAnnounceConsumer(TopicConsumer):
 
     name = 'inst_ann_consumer'
     exchange = 'announce'
-    routing_key = '*'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -90,7 +89,6 @@ class LoadAppResponseConsumer(TopicConsumer):
 
     name = 'load_app_resp_consumer'
     exchange = 'status'
-    routing_key = '*'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -100,7 +98,6 @@ class ConfigAppResponseConsumer(TopicConsumer):
 
     name = 'config_app_resp_consumer'
     exchange = 'status'
-    routing_key = '*'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -110,7 +107,6 @@ class RunAppResponseConsumer(TopicConsumer):
 
     name = 'run_app_resp_consumer'
     exchange = 'status'
-    routing_key = '*'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -120,7 +116,6 @@ class ConfigDictCommandProducer(TopicCommandProducer):
 
     name = 'config_dict'
     exchange = 'config_dict'
-    routing_key = '*'
 
     def operation(self, *args):
         """
@@ -174,7 +169,7 @@ class Unit(AMQPService):
         print 'Starting ', N, 'nodes of ', node_type, ami_id
         self.reservation = self.ec2.run_instances(ami_id, min_count=N,
                 max_count=N, user_data=user_data)
-        InstanceAnnounceConsumer({'node_type':node_type, 'routing_key':'*'}).setServiceParent(self)
+        InstanceAnnounceConsumer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
         TopicCommandProducer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
         ConfigDictCommandProducer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
         AMQPService.startService(self)
@@ -227,7 +222,7 @@ class Unit(AMQPService):
         print 'Start Load App for Unit ', self.name
         load_app_script = self.config['load_app_script']
         if load_app_script:
-            LoadAppResponseConsumer({'node_type':self.node_type, 'routing_key':'*'}).setServiceParent(self)
+            LoadAppResponseConsumer({'node_type':self.node_type, 'routing_key':self.node_type}).setServiceParent(self)
             self.getServiceNamed('runscript').operation(load_app_script)
         else:
             self.ready_for_config = True
@@ -246,7 +241,7 @@ class Unit(AMQPService):
                     node_config_dict[k] = new_v
 
 
-            ConfigAppResponseConsumer({'node_type':self.node_type,'routing_key':'*'}).setServiceParent(self)
+            ConfigAppResponseConsumer({'node_type':self.node_type,'routing_key':self.node_type}).setServiceParent(self)
             self.getServiceNamed('runscript').operation(config_app_script)
         else:
             self.ready_for_run = True
@@ -256,7 +251,7 @@ class Unit(AMQPService):
         print 'Run App on node ', self.node_type
         run_app_script = self.config['run_app_script']
         if run_app_script:
-            RunAppResponseConsumer({'node_type':self.node_type, 'routing_key':'*'}).setServiceParent(self)
+            RunAppResponseConsumer({'node_type':self.node_type, 'routing_key':self.node_type}).setServiceParent(self)
             self.getServiceNamed('runscript').operation(run_app_script)
 
 
