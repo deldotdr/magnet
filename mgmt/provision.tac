@@ -25,11 +25,11 @@ else:
 erddap_util_config_config = {
         'public_dns_name':'erddap_util',
         'MemcachedHostname':'get_memcached',
-        'useMessagingLoadDataset':False,
+        'useMessagingLoadDataset':'false',
         'BrokerHostname':'get_rabbitmq',
-        'Exchange':None,
-        'LoadTopic':None,
-        'StatusTopic':None,
+        'Exchange':'',
+        'LoadTopic':'',
+        'StatusTopic':'',
         }
  
 
@@ -59,7 +59,7 @@ erddap_util = Unit(erddap_util_config, ec2)
 erddap_crawl_config_config = {
         'public_dns_name':'erddap_crawl',
         'MemcachedHostname':'get_memcached',
-        'useMessagingLoadDataset':True,
+        'useMessagingLoadDataset':'true',
         'BrokerHostname':'get_rabbitmq',
         'Exchange':'crawler',
         'LoadTopic':'load',

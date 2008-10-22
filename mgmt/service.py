@@ -130,7 +130,7 @@ class ConfigDictCommandProducer(TopicCommandProducer):
         """
 
         def operation(self, *args):
-            msg = str(args[0])
+            msg = str(args)
             self.sendMessage(msg)
 
 
@@ -190,6 +190,8 @@ class Unit(AMQPService):
             print 'All ', self.num_insts, ' ', self.node_type, 'instances loaded'
             self.ready_for_load_app = True
             self.getServiceNamed('inst_ann_consumer').stopService()
+            for i in self.reservation.instances:
+                i.update()
             self.public_dns_names = [i.public_dns_name for i in self.reservation.instances]
             self.private_dns_names = [i.private_dns_name for i in self.reservation.instances]
             self.parent.setUnitReadyForLoadApp(self.node_type)
@@ -236,9 +238,7 @@ class Unit(AMQPService):
     def startConfigApp(self):
         config_app_script = self.config['config_app_script']
         if config_app_script:
-
             node_config_dict = self.config['node_config_dict']
-
             for k,v in node_config_dict.iteritems():
                 if v[:4] == 'get_':
                     node_to_get = v[4:]
@@ -247,7 +247,7 @@ class Unit(AMQPService):
 
 
             ConfigAppResponseConsumer({'node_type':self.node_type,'routing_key':self.node_type}).setServiceParent(self)
-            self.getServiceNamed('runscript').operation(config_app_script)
+            self.getServiceNamed('config_dict').operation(config_app_script, node_config_dict)
         else:
             self.ready_for_run = True
             self.parent.setUnitReadyForRunApp(self.node_type)

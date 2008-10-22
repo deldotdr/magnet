@@ -249,15 +249,23 @@ class ConfigDictConsumer(Task):
     type = 'consume'
 
     def operation(self, *args):
-        config_dict = eval(args[0])
+        config_dict_script_pair = eval(args[0])
+        config_dict = config_dict_script_pair[0]
+        script_temp = config_dict_script_pair[1]
         public_dns_name = self.parent.public_dns_name
         private_dns_name = self.parent.private_dns_name
         config_dict.update({
             'public_dns_name':public_dns_name,
             'private_dns_name':private_dns_name,
             })
-        self.config_dict = config_dict
-        self.parent.getServiceNamed('status').sendMessage(self.parent.instance_id)
+        from string import Template
+        config_dict = str(config_dict)
+        config_script = Template(script_temp).substitute({'config_dict':config_dict})
+        cmd = write_script_file(config_script)
+        status, output = commands.getstatusoutput(cmd)
+        msg = {'status':status, 'output':output}
+        msg = str(msg)
+        self.parent.getServiceNamed('status').sendMessage(msg)
 
 
 
