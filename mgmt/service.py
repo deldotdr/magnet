@@ -34,8 +34,8 @@ class Provisioner(service.MultiService):
             self.startLoadAppPhase()
 
     def setUnitReadyForConfigApp(self, unit_name):
-        self.units_ready_for_config += 1
-        if self.units_ready_for_config == self.num_units:
+        self.units_ready_for_config_app += 1
+        if self.units_ready_for_config_app == self.num_units:
             self.startConfigAppPhase()
 
     def setUnitReadyForRunApp(self, unit_name):
