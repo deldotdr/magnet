@@ -43,8 +43,7 @@ class BaseTask(object):
         yield channel.queue_bind(queue=reply.queue,
                                 exchange=self.exchange,
                                 routing_key=self.routing_key)
-        # yield channel.basic_consume(queue=reply.queue)
-        yield channel.basic_consume(queue=reply.queue, no_ack=True)
+        yield channel.basic_consume(queue=reply.queue)
         channel.deferred.addCallback(self.gotMessage)
         self.channel = channel
         defer.returnValue(channel)
@@ -79,8 +78,11 @@ class BaseTask(object):
         print 'Exchange ', self.exchange
         print 'routing key ', self.routing_key
         print '---------------------end'
+        if msg.name='close-ok':
+            print '// channel closed ', self.name, self.exchange, self.routing_key
+            return
         self.operation(msg.content.body)
-        # self.channel.basic_ack(delivery_tag=msg.delivery_tag)
+        self.channel.basic_ack(delivery_tag=msg.delivery_tag)
         self.channel.deferred.addCallback(self.gotMessage)
 
     def operation(self, *args):
