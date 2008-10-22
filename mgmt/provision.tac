@@ -6,7 +6,8 @@ import boto
 from twisted.application import service
 
 import magnet
-spec_path = magnet.__path__[0] + '/amqp0-8.xml'
+magnet_path = magnet.__path__[0]
+spec_path = magnet_path + '/amqp0-8.xml'
 
 from magnet.mgmt.service import Unit
 from magnet.mgmt.service import Provisioner
@@ -32,9 +33,9 @@ erddap_util_config_config = {
         }
  
 
-load_erddap_script = spec_path + '/scripts/load_erddap.sh'
-config_erddap_script = spec_path + '/scripts/config_erddap.sh'
-run_erddap_script = spec_path + '/scripts/run_erddap.sh'
+load_erddap_script = magnet_path + '/scripts/load_erddap.sh'
+config_erddap_script = magnet_path + '/scripts/config_erddap.sh'
+run_erddap_script = magnet_path + '/scripts/run_erddap.sh'
 erddap_util_config = {
         'node_type':'erddap_util',
         'ami_id':'ami-b62acedf',
@@ -86,7 +87,7 @@ erddap_crawl_config = {
 erddap_crawl = Unit(erddap_crawl_config, ec2)
 
 
-run_memcached_script = spec_path + '/scripts/run_memcached.sh'
+run_memcached_script = magnet_path + '/scripts/run_memcached.sh'
 memcached_config_dict = {
         'private_dns_name':'memcached',
         }
@@ -109,7 +110,7 @@ memcached_config = {
  
 memcached = Unit(memcached_config, ec2)
 
-run_rabbit_script = spec_path + '/scripts/run_rabbitmq.sh'
+run_rabbit_script = magnet_path + '/scripts/run_rabbitmq.sh'
 rabbitmq_config_dict = {
         'private_dns_name':'rabbit',
         }
