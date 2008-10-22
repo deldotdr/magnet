@@ -94,7 +94,7 @@ memcached_config_dict = {
 
 memcached_config = {
         'node_type':'memcached',
-        'ami_id':'ami-952acefc',
+        'ami_id':'ami-3631d55f',
         'num_insts':1,
         'host':'rabbitmq.amoeba.ucsd.edu',
         'port':5672,
@@ -140,9 +140,28 @@ erddap_crawl.setServiceParent(provisioner)
 memcached.setServiceParent(provisioner)
 rabbitmq.setServiceParent(provisioner)
 
+
+from twisted.cred import portal, checkers
+from twisted.conch import manhole, manhole_ssh
+
+def getManholeFactory(namespace, **passwords):
+    realm = manhole_ssh.TerminalRealm( )
+    def getManhole(_): return manhole.Manhole(namespace)
+    realm.chainedProtocolFactory.protocolFactory = getManhole
+    p = portal.Portal(realm)
+    p.registerChecker(
+        checkers.InMemoryUsernamePasswordDatabaseDontUse(**passwords))
+    f = manhole_ssh.ConchFactory(p)
+    return f
+
+manfact = getManholeFactory(locals(), admin='secret')
+mansrv = internet.TCPServer(2222, manfact)
+ 
+
+
 # main service
 application = service.Application('Provisioner')
 provisioner.setServiceParent(service.IServiceCollection(application))
 
-
+mansrv.setServiceParent(application)
 

@@ -213,7 +213,8 @@ class TopicCommandProducer(Task):
     script_path = None
 
     def operation(self, *args):
-        script = read_script_file(self.script_path)
+        script_path = args[0]
+        script = read_script_file(script_path)
         self.sendMessage(script)
 
 
