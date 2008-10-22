@@ -78,8 +78,7 @@ class BaseTask(object):
         print 'Exchange ', self.exchange
         print 'routing key ', self.routing_key
         print '---------------------end'
-        if msg.name=='close-ok':
-            self.channel.basic_ack(delivery_tag=msg.delivery_tag)
+        if msg.method.name == u'close-ok':
             print '// channel closed ', self.name, self.exchange, self.routing_key
             return
         self.operation(msg.content.body)
@@ -263,7 +262,7 @@ class ConfigDictConsumer(Task):
 
 
 def read_script_file(path):
-    f = open(path)
+    f = open(str(path))
     s = f.read()
     f.close()
     return s

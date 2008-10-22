@@ -23,6 +23,11 @@ class Provisioner(service.MultiService):
     units_ready_for_run_app = 0
     num_units = 0
 
+    def startService(self):
+        self.num_units = len([s for s in self])
+        print 'Provisioner has ', self.num_units
+        service.MultiService.startService(self)
+
     def setUnitReadyForLoadApp(self, unit_name):
         self.units_ready_for_load_app += 1
         if self.units_ready_for_load_app == self.num_units:
