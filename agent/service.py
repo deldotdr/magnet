@@ -78,7 +78,7 @@ class BaseTask(object):
         print 'Exchange ', self.exchange
         print 'routing key ', self.routing_key
         print '---------------------end'
-        if msg.name='close-ok':
+        if msg.name=='close-ok':
             self.channel.basic_ack(delivery_tag=msg.delivery_tag)
             print '// channel closed ', self.name, self.exchange, self.routing_key
             return
