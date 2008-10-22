@@ -275,7 +275,8 @@ def write_script_file(script):
     """
     # home = os.getenv('HOME')
     # fname = os.path.join(home,'remote_command.sh')
-    fname = 'remote_command.sh'
+    cur_dir = os.getcwd()
+    fname = os.path.join(cur_dir, 'remote_command.sh')
     f = open(fname, 'w')
     f.write(script)
     f.close()
