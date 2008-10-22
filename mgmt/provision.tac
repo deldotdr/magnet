@@ -141,6 +141,7 @@ memcached.setServiceParent(provisioner)
 rabbitmq.setServiceParent(provisioner)
 
 
+from twisted.application import internet
 from twisted.cred import portal, checkers
 from twisted.conch import manhole, manhole_ssh
 
