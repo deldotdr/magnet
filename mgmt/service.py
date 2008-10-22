@@ -7,6 +7,7 @@ from twisted.application import internet
 from magnet.agent.service import AMQPService
 from magnet.agent.service import TopicConsumer
 from magnet.agent.service import TopicCommandProducer
+from magnet.agent.service import read_script_file
 
 
 
@@ -236,6 +237,7 @@ class Unit(AMQPService):
             self.parent.setUnitReadyForConfigApp(self.node_type)
 
     def startConfigApp(self):
+        print 'startConfigApp ', self.node_type
         config_app_script = self.config['config_app_script']
         if config_app_script:
             node_config_dict = self.config['node_config_dict']
@@ -244,10 +246,9 @@ class Unit(AMQPService):
                     node_to_get = v[4:]
                     new_v = self.parent.getServiceNamed(node_to_get).get_private_dns_name()
                     node_config_dict[k] = new_v
-
-
             ConfigAppResponseConsumer({'node_type':self.node_type,'routing_key':self.node_type}).setServiceParent(self)
-            self.getServiceNamed('config_dict').operation(config_app_script, node_config_dict)
+            conf_script_temp = read_script_file(config_app_script)
+            self.getServiceNamed('config_dict').operation(node_config_dict, conf_script_temp)
         else:
             self.ready_for_run = True
             self.parent.setUnitReadyForRunApp(self.node_type)
