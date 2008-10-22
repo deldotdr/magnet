@@ -240,9 +240,12 @@ class Unit(AMQPService):
         print 'startConfigApp ', self.node_type
         config_app_script = self.config['config_app_script']
         if config_app_script:
+            print 'true config app script'
             node_config_dict = self.config['node_config_dict']
             for k,v in node_config_dict.iteritems():
+                print k,v
                 if v[:4] == 'get_':
+                    print v
                     node_to_get = v[4:]
                     new_v = self.parent.getServiceNamed(node_to_get).get_private_dns_name()
                     node_config_dict[k] = new_v

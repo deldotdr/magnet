@@ -27,9 +27,9 @@ erddap_util_config_config = {
         'MemcachedHostname':'get_memcached',
         'useMessagingLoadDataset':'false',
         'BrokerHostname':'get_rabbitmq',
-        'Exchange':'',
-        'LoadTopic':'',
-        'StatusTopic':'',
+        'Exchange':'xxxxx',
+        'LoadTopic':'xxxxx',
+        'StatusTopic':'xxxxx',
         }
  
 
