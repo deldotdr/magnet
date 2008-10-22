@@ -273,8 +273,9 @@ def write_script_file(script):
     """write temp script file and return file name to be executed as a
     command.
     """
-    home = os.getenv('HOME')
-    fname = os.path.join(home,'remote_command.sh')
+    # home = os.getenv('HOME')
+    # fname = os.path.join(home,'remote_command.sh')
+    fname = 'remote_command.sh'
     f = open(fname, 'w')
     f.write(script)
     f.close()
