@@ -72,8 +72,8 @@ class Provisioner(service.MultiService):
         for s in self.services:
             s.startRunApp()
 
-    def status(self):
-        stats = [s.status() for s in self]
+    def get_status_details(self):
+        stats = [s.get_status_details() for s in self]
         print '================================='
         print 'Provision Status: ', self.status
         print 'Number of units:  ', self.num_units
@@ -291,7 +291,7 @@ class Unit(AMQPService):
             self.getServiceNamed('runscript').operation(run_app_script)
 
 
-    def status(self):
+    def get_status_details(self):
         stats = []
         for i in self.reservation.instances:
             inst_stats = []
