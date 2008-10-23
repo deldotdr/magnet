@@ -250,8 +250,8 @@ class Unit(AMQPService):
                     new_v = self.parent.getServiceNamed(node_to_get).get_private_dns_name()
                     node_config_dict[k] = new_v
             ConfigAppResponseConsumer({'node_type':self.node_type,'routing_key':self.node_type}).setServiceParent(self)
-            conf_script_temp = read_script_file(config_app_script)
-            self.getServiceNamed('config_dict').operation(node_config_dict, conf_script_temp)
+            # conf_script_temp = read_script_file(config_app_script)
+            self.getServiceNamed('config_dict').operation(node_config_dict)
         else:
             self.ready_for_run = True
             self.parent.setUnitReadyForRunApp(self.node_type)

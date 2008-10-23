@@ -249,26 +249,20 @@ class ConfigDictConsumer(Task):
     type = 'consume'
 
     def operation(self, *args):
-        config_dict_script_pair = eval(args[0])
-        config_dict = config_dict_script_pair[0]
-        script_temp = config_dict_script_pair[1]
+        config_dict = eval(args[0])
+        templ_file = config_dict['templ_file']
+        final_path = config_dict['final_path']
         print 'config dict', config_dict
-        print 'script templ', script_temp
         public_dns_name = self.parent.public_dns_name
         private_dns_name = self.parent.private_dns_name
         config_dict.update({
             'public_dns_name':public_dns_name,
             'private_dns_name':private_dns_name,
             })
-        from string import Template
-        config_dict = str(config_dict)
-        config_script = Template(script_temp).substitute({'config_dict':config_dict})
-        print 'config script after temp', config_script
-        cmd = write_script_file(config_script)
-        print 'running command: ', cmd
-        status, output = commands.getstatusoutput(cmd)
-        msg = {'status':status, 'output':output}
-        msg = str(msg)
+        from magnet.util import config_script as cf
+        final_conf_str = cf.fill_in_template(templ_file, config_dict)
+        cf.write_final_config(final_conf_str, final_path)
+        msg = 'it might have worked...'
         self.parent.getServiceNamed('status').sendMessage(msg)
 
 

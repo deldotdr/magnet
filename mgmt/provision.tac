@@ -30,6 +30,8 @@ erddap_util_config_config = {
         'Exchange':'xxxxx',
         'LoadTopic':'xxxxx',
         'StatusTopic':'xxxxx',
+        'templ_file':'/home/tomcat/magnet/scripts/setup.xml',
+        'final_path':'/opt/apache-tomcat-6.0.18/content/erddap/setup.xml',
         }
  
 
@@ -47,7 +49,7 @@ erddap_util_config = {
         'password':'guest',
         'spec':spec_path,
         'load_app_script':load_erddap_script,
-        'config_app_script':config_erddap_script,
+        'config_app_script':True,
         'run_app_script':run_erddap_script,
         'node_config_dict':erddap_util_config_config,
         }
@@ -64,6 +66,8 @@ erddap_crawl_config_config = {
         'Exchange':'crawler',
         'LoadTopic':'load',
         'StatusTopic':'status',
+        'templ_file':'/home/tomcat/magnet/scripts/setup.xml',
+        'final_path':'/opt/apache-tomcat-6.0.18/content/erddap/setup.xml',
         }
  
 erddap_crawl_config = {
@@ -77,7 +81,7 @@ erddap_crawl_config = {
         'password':'guest',
         'spec':spec_path,
         'load_app_script':load_erddap_script,
-        'config_app_script':config_erddap_script,
+        'config_app_script':True,
         'run_app_script':run_erddap_script,
         'node_config_dict':erddap_crawl_config_config,
         }
