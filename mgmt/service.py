@@ -131,7 +131,7 @@ class ConfigDictCommandProducer(Task):
         use dictionary of values to fill into template config file
         living on the provision exchange
         """
-        msg = str(args)
+        msg = str(args[0])
         self.sendMessage(msg)
 
 
