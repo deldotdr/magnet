@@ -23,7 +23,9 @@ class Provisioner(service.MultiService):
     units_ready_for_load_app = 0
     units_ready_for_config_app = 0
     units_ready_for_run_app = 0
+    units_finished = 0
     num_units = 0
+    status = 0
 
     def startService(self):
         self.num_units = len([s for s in self])
@@ -33,23 +35,29 @@ class Provisioner(service.MultiService):
     def setUnitReadyForLoadApp(self, unit_name):
         self.units_ready_for_load_app += 1
         if self.units_ready_for_load_app == self.num_units:
+            self.status = 'load app'
             self.startLoadAppPhase()
 
     def setUnitReadyForConfigApp(self, unit_name):
         self.units_ready_for_config_app += 1
         if self.units_ready_for_config_app == self.num_units:
+            self.status = 'config app'
             self.startConfigAppPhase()
 
     def setUnitReadyForRunApp(self, unit_name):
         self.units_ready_for_run_app += 1
         if  self.units_ready_for_run_app == self.num_units:
+            self.status = 'run app'
             self.startRunAppPhase()
 
-    def finishUnitStartupPhase(self):
+    def setUnitFinished(self):
         """This marks the end of the Unit Starup phase.
         All nodes are running.
         Collect all hostnames.
         """
+        self.units_finished += 1
+        if self.units_finished == self.num_units:
+            self.status = 'finished'
 
 
     def startLoadAppPhase(self):
@@ -63,6 +71,16 @@ class Provisioner(service.MultiService):
     def startRunAppPhase(self):
         for s in self.services:
             s.startRunApp()
+
+    def status(self):
+        stats = [s.status() for s in self]
+        print '================================='
+        print 'Provision Status: ', self.status
+        print 'Number of units:  ', self.num_units
+        n = len(stats[0]) 
+        for stat in stats:
+            print '%s '*n % tuple(stat)
+        print '================================='
 
 
 
@@ -142,6 +160,7 @@ class Unit(AMQPService):
     reservation = None
     num_insts = 0
     instances_confirmed = 0
+    status = 0
     apps_loaded = 0
     apps_configed = 0
     apps_running = 0
@@ -172,6 +191,7 @@ class Unit(AMQPService):
         N = self.config['num_insts']
         node_type = self.config['node_type']
         user_data = node_type
+        self.status = 'starting'
         print 'Starting ', N, 'nodes of ', node_type, ami_id
         self.reservation = self.ec2.run_instances(ami_id, min_count=N,
                 max_count=N, user_data=user_data)
@@ -181,6 +201,8 @@ class Unit(AMQPService):
         AMQPService.startService(self)
 
     def stopService(self):
+        if self.parent.status == 'finished':
+            return
         print 'Stopping ', self.config['node_type'], ' Nodes'
         self.reservation.stop_all()
 
@@ -221,12 +243,15 @@ class Unit(AMQPService):
         if self.apps_running == self.num_insts:
             print 'all instances of', self.name, ' running!'
             self.getServiceNamed('run_app_resp_consumer').stopService()
+            self.status = 'finished'
+            self.parent.setUnitFinished(self.node_type)
 
 
 
     def startLoadApp(self):
         """send command to download and install apps to units who need it
         """
+        self.status = 'load app'
         print 'Start Load App for Unit ', self.name
         load_app_script = self.config['load_app_script']
         if load_app_script:
@@ -237,6 +262,7 @@ class Unit(AMQPService):
             self.parent.setUnitReadyForConfigApp(self.node_type)
 
     def startConfigApp(self):
+        self.status = 'config app'
         print 'startConfigApp ', self.node_type
         config_app_script = self.config['config_app_script']
         if config_app_script:
@@ -257,11 +283,24 @@ class Unit(AMQPService):
             self.parent.setUnitReadyForRunApp(self.node_type)
 
     def startRunApp(self):
+        self.status = 'run app'
         print 'Run App on node ', self.node_type
         run_app_script = self.config['run_app_script']
         if run_app_script:
             RunAppResponseConsumer({'node_type':self.node_type, 'routing_key':self.node_type}).setServiceParent(self)
             self.getServiceNamed('runscript').operation(run_app_script)
+
+
+    def status(self):
+        stats = []
+        for i in self.reservation.instances:
+            inst_stats = []
+            inst_stats.append(self.node_type)
+            inst_stats.append(i.id)
+            inst_stats.append(i.public_dns_name)
+            stats.append(inst_stats)
+        return stats
+
 
 
 
