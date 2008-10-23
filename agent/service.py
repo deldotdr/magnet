@@ -252,6 +252,8 @@ class ConfigDictConsumer(Task):
         config_dict_script_pair = eval(args[0])
         config_dict = config_dict_script_pair[0]
         script_temp = config_dict_script_pair[1]
+        print 'config dict', config_dict
+        print 'script templ', script_temp
         public_dns_name = self.parent.public_dns_name
         private_dns_name = self.parent.private_dns_name
         config_dict.update({
@@ -261,6 +263,7 @@ class ConfigDictConsumer(Task):
         from string import Template
         config_dict = str(config_dict)
         config_script = Template(script_temp).substitute({'config_dict':config_dict})
+        print 'config script after temp', config_script
         cmd = write_script_file(config_script)
         status, output = commands.getstatusoutput(cmd)
         msg = {'status':status, 'output':output}
