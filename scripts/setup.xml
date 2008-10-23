@@ -42,7 +42,7 @@ At ERD, we use
   '/u00/cwatch/erddap2/' for development,
   '/u00/cwatch/erddap/' for releases.
 -->
-<bigParentDirectory>/home/tomcat</bigParentDirectory>
+<bigParentDirectory>/home/tomcat/</bigParentDirectory>
 
 <!-- Daily status reports and all error messages are emailed to emailEverythingTo 
   (e.g., john.doe@noaa.gov).
