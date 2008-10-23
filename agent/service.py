@@ -265,6 +265,7 @@ class ConfigDictConsumer(Task):
         config_script = Template(script_temp).substitute({'config_dict':config_dict})
         print 'config script after temp', config_script
         cmd = write_script_file(config_script)
+        print 'running command: ', cmd
         status, output = commands.getstatusoutput(cmd)
         msg = {'status':status, 'output':output}
         msg = str(msg)
@@ -287,8 +288,10 @@ def write_script_file(script):
     # home = os.getenv('HOME')
     # fname = os.path.join(home,'remote_command.sh')
     cur_dir = os.getcwd()
+    print 'writing script in this dir: ', cur_dir
     fname = os.path.join(cur_dir, 'remote_command.sh')
     f = open(fname, 'w')
+    print 'writing this content: ', script
     f.write(script)
     f.close()
     os.chmod(fname, 0755)
