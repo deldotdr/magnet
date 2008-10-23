@@ -5,6 +5,7 @@ from twisted.application import service
 from twisted.application import internet
 
 from magnet.agent.service import AMQPService
+from magnet.agent.service import Task
 from magnet.agent.service import TopicConsumer
 from magnet.agent.service import TopicCommandProducer
 from magnet.agent.service import read_script_file
@@ -118,9 +119,10 @@ class RunAppResponseConsumer(TopicConsumer):
         instance_id = args[0]
         self.parent.setInstacnceConfirmRunning(instance_id)
 
-class ConfigDictCommandProducer(TopicCommandProducer):
+class ConfigDictCommandProducer(Task):
 
     name = 'config_dict'
+    type = 'produce'
     exchange = 'config_dict'
 
     def operation(self, *args):
@@ -129,10 +131,8 @@ class ConfigDictCommandProducer(TopicCommandProducer):
         use dictionary of values to fill into template config file
         living on the provision exchange
         """
-
-        def operation(self, *args):
-            msg = str(args)
-            self.sendMessage(msg)
+        msg = str(args)
+        self.sendMessage(msg)
 
 
 
