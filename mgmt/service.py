@@ -50,7 +50,7 @@ class Provisioner(service.MultiService):
             self.status = 'run app'
             self.startRunAppPhase()
 
-    def setUnitFinished(self):
+    def setUnitFinished(self, unit_name):
         """This marks the end of the Unit Starup phase.
         All nodes are running.
         Collect all hostnames.
