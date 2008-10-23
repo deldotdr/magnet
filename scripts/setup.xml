@@ -91,7 +91,7 @@ True works the same regardless of which dataset Map is used.
 -->
 <useLoadDatasets>false</useLoadDatasets>
 
-<useMessagingLoadDataset>$useMessagingLoadDatasets</useMessagingLoadDataset>
+<useMessagingLoadDataset>$useMessagingLoadDataset</useMessagingLoadDataset>
 <!-- ******** Messaging Configuration ************* -->
 <BrokerHostname>$brokerHostname</BrokerHostname>
 <BrokerPort></BrokerPort>

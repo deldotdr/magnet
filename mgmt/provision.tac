@@ -24,12 +24,12 @@ else:
 
 erddap_util_config_config = {
         'public_dns_name':'erddap_util',
-        'MemcachedHostname':'get_memcached',
+        'memcachedHostname':'get_memcached',
         'useMessagingLoadDataset':'false',
-        'BrokerHostname':'get_rabbitmq',
-        'Exchange':'xxxxx',
-        'LoadTopic':'xxxxx',
-        'StatusTopic':'xxxxx',
+        'brokerHostname':'get_rabbitmq',
+        'exchange':'xxxxx',
+        'loadTopic':'xxxxx',
+        'statusTopic':'xxxxx',
         'templ_file':'/home/tomcat/magnet/scripts/setup.xml',
         'final_path':'/opt/apache-tomcat-6.0.18/content/erddap/setup.xml',
         }
@@ -60,12 +60,12 @@ erddap_util = Unit(erddap_util_config, ec2)
 
 erddap_crawl_config_config = {
         'public_dns_name':'erddap_crawl',
-        'MemcachedHostname':'get_memcached',
+        'memcachedHostname':'get_memcached',
         'useMessagingLoadDataset':'true',
-        'BrokerHostname':'get_rabbitmq',
-        'Exchange':'crawler',
-        'LoadTopic':'load',
-        'StatusTopic':'status',
+        'brokerHostname':'get_rabbitmq',
+        'exchange':'crawler',
+        'loadTopic':'load',
+        'statusTopic':'status',
         'templ_file':'/home/tomcat/magnet/scripts/setup.xml',
         'final_path':'/opt/apache-tomcat-6.0.18/content/erddap/setup.xml',
         }
