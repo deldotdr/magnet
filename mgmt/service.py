@@ -73,7 +73,9 @@ class Provisioner(service.MultiService):
             s.startRunApp()
 
     def get_status_details(self):
-        stats = [s.get_status_details() for s in self]
+        stats = []
+        for s in self:
+            stats.extend(s.get_status_details())
         print '================================='
         print 'Provision Status: ', self.status
         print 'Number of units:  ', self.num_units
