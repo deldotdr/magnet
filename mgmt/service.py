@@ -81,7 +81,7 @@ class Provisioner(service.MultiService):
         print 'Number of units:  ', self.num_units
         n = len(stats[0]) 
         for stat in stats:
-            print '%s '*n % tuple(stat)
+            print '%s '*n % tuple(map(str,stat))
         print '================================='
 
 
