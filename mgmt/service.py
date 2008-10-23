@@ -188,6 +188,11 @@ class Unit(AMQPService):
         """
         return self.private_dns_names[0]
 
+    def get_all_private_dns_names(self):
+        """return the dns names for all nodes in a unit
+        """
+        return self.private_dns_names
+
     def startService(self):
         ami_id = self.config['ami_id']
         N = self.config['num_insts']
@@ -298,6 +303,7 @@ class Unit(AMQPService):
         for i in self.reservation.instances:
             inst_stats = []
             inst_stats.append(self.node_type)
+            inst_stats.append(self.status)
             inst_stats.append(i.id)
             inst_stats.append(i.public_dns_name)
             stats.append(inst_stats)
