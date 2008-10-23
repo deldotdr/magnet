@@ -74,7 +74,7 @@ so that ERDDAP quickly loads a dataset that you are interested in.
 
 <!-- baseUrl is the start of the public url, to which "[warName]" is appended.
 You MUST CHANGE this when you install ERDDAP on your server. -->
-<baseUrl>$baseUrl</baseUrl>
+<baseUrl>$public_dns_name</baseUrl>
 
 <!-- *******!!!!!!! New Configuration !!!!!!!!!************ -->
 <!-- *******!!!!!!! New Configuration !!!!!!!!!************ -->
