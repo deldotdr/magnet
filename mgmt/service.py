@@ -121,10 +121,7 @@ class EC2Provisioner(Provisioner):
 
 
     def startService(self):
-        try:
-            ec2 = boto.connect_ec2(self.aws_access_key, self.aws_secret_access_key)
-        except:
-            print 'boto connect ot ec2 error'
+        ec2 = boto.connect_ec2(self.aws_access_key, self.aws_secret_access_key)
 
         self.ec2 = ec2
         Provisioner.startService(self)

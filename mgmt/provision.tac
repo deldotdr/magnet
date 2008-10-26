@@ -16,7 +16,7 @@ AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
 if AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY:
-    ec2 = boto.connect_ec2(AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY)
+    pass
 else:
     print 'Need AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY environment variables'
     sys.exit(1)
