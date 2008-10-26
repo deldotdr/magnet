@@ -87,7 +87,7 @@ task_announce.setServiceParent(agent_service)
 task_status.setServiceParent(agent_service)
 task_dns.setServiceParent(agent_service)
 task_runscript.setServiceParent(agent_service)
-task_config_dict.setServiceParent(agent_service)
+task_config_templ.setServiceParent(agent_service)
 
 
 application = service.Application('ContextAgent')
