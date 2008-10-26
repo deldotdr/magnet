@@ -1,7 +1,6 @@
 
 import os
 import sys
-import boto
 
 from twisted.application import service
 

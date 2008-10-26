@@ -10,6 +10,7 @@ from magnet.agent.service import TopicConsumer
 from magnet.agent.service import TopicCommandProducer
 from magnet.agent.service import read_script_file
 
+import boto
 
 import magnet
 magnet_path = magnet.__path__[0]
