@@ -271,7 +271,7 @@ class ConfigTemplateConsumer(Task):
     def operation(self, msg):
         msg_dict = eval(msg)
         config_templ = msg_dict['config_templ']
-        config_final = Template(config_templ).substitute(self.user_meta_data)
+        config_final = Template(config_templ).substitute(self.parent.user_meta_data)
 
 
 class AllNodeDnsConsumer(Task):
@@ -283,7 +283,7 @@ class AllNodeDnsConsumer(Task):
     def operation(self, msg):
         msg_dict = eval(msg)
         self.dns_dict = msg_dict
-        self.user_meta_data.update(self.dns_dict)
+        self.parent.user_meta_data.update(self.dns_dict)
         res_msg = str({'status':0, 'output':'got dns dict'})
         self.parent.getServiceNamed('status').sendMessage(res_msg)
 
