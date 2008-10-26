@@ -39,8 +39,8 @@ class Provisioner(service.MultiService):
 
     def setUnitReadyForLoadApp(self, unit_name):
         self.units_ready_for_load_app += 1
-        self.sendDnsNames()
         if self.units_ready_for_load_app == self.num_units:
+            self.sendDnsNames()
             self.status = 'load app'
             self.startLoadAppPhase()
 
@@ -212,8 +212,8 @@ class SendConfigTemplate(Task):
 
 class SendAllDnsNames(Task):
 
-    name = 'dns_names'
-    exchange = 'dns_names'
+    name = 'dns'
+    exchange = 'dns'
     type = 'produce'
 
     def operation(self, dns_dict):
@@ -335,7 +335,7 @@ class Unit(AMQPService):
     def sendDnsNames(self, dns_names):
         """Send a dictionary of all nodes dns names
         """
-        self.getServiceNamed('dns_names').operation(dns_names)
+        self.getServiceNamed('dns').operation(dns_names)
 
     def startLoadApp(self):
         """send command to download and install apps to units who need it
