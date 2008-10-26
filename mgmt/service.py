@@ -11,7 +11,7 @@ from magnet.agent.service import TopicCommandProducer
 from magnet.agent.service import read_script_file
 
 
- import magnet
+import magnet
 magnet_path = magnet.__path__[0]
 spec_path = magnet_path + '/amqp0-8.xml'
 
