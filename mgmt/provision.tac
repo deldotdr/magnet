@@ -10,7 +10,7 @@ magnet_path = magnet.__path__[0]
 spec_path = magnet_path + '/amqp0-8.xml'
 
 from magnet.mgmt.service import Unit
-from magnet.mgmt.service import Provisioner
+from magnet.mgmt.service import EC2Provisioner
 
 AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
@@ -21,22 +21,14 @@ else:
     print 'Need AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY environment variables'
     sys.exit(1)
 
+provisioner = EC2Provisioner(aws_access_key=AWS_ACCESS_KEY, 
+                            aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
 
-erddap_util_config_config = {
-        'public_dns_name':'erddap_util',
-        'memcachedHostname':'get_memcached',
-        'useMessagingLoadDataset':'false',
-        'brokerHostname':'get_rabbitmq',
-        'exchange':'xxxxx',
-        'loadTopic':'xxxxx',
-        'statusTopic':'xxxxx',
-        'templ_file':'/home/tomcat/magnet/scripts/setup.xml',
-        'final_path':'/opt/apache-tomcat-6.0.18/content/erddap/setup.xml',
-        }
  
 
 load_erddap_script = magnet_path + '/scripts/load_erddap.sh'
-config_erddap_script = magnet_path + '/scripts/config_erddap.sh'
+erddap_util_setup = magnet_path + '/scripts/erddap_util_setup.xml'
+final_setup_path = '/opt/apache-tomcat-6.0.18/content/erddap/setup.xml'
 run_erddap_script = magnet_path + '/scripts/run_erddap.sh'
 erddap_util_config = {
         'node_type':'erddap_util',
@@ -49,27 +41,17 @@ erddap_util_config = {
         'password':'guest',
         'spec':spec_path,
         'load_app_script':load_erddap_script,
-        'config_app_script':True,
+        'setup_templ':erddap_util_setup,
+        'final_setup_path':final_setup_path,
+        'config_app':True,
         'run_app_script':run_erddap_script,
-        'node_config_dict':erddap_util_config_config,
         }
 
 
 erddap_util = Unit(erddap_util_config, ec2)
 
 
-erddap_crawl_config_config = {
-        'public_dns_name':'erddap_crawl',
-        'memcachedHostname':'get_memcached',
-        'useMessagingLoadDataset':'true',
-        'brokerHostname':'get_rabbitmq',
-        'exchange':'crawler',
-        'loadTopic':'load',
-        'statusTopic':'status',
-        'templ_file':'/home/tomcat/magnet/scripts/setup.xml',
-        'final_path':'/opt/apache-tomcat-6.0.18/content/erddap/setup.xml',
-        }
- 
+erddap_crawl_setup = magnet_path + '/scripts/erddap_crawl_setup.xml'
 erddap_crawl_config = {
         'node_type':'erddap_crawl',
         'ami_id':'ami-b62acedf',
@@ -81,9 +63,10 @@ erddap_crawl_config = {
         'password':'guest',
         'spec':spec_path,
         'load_app_script':load_erddap_script,
-        'config_app_script':True,
+        'setup_templ':erddap_crawl_setup,
+        'final_setup_path':final_setup_path,
+        'config_app':True,
         'run_app_script':run_erddap_script,
-        'node_config_dict':erddap_crawl_config_config,
         }
 
 
@@ -92,9 +75,6 @@ erddap_crawl = Unit(erddap_crawl_config, ec2)
 
 
 run_memcached_script = magnet_path + '/scripts/run_memcached.sh'
-memcached_config_dict = {
-        'private_dns_name':'memcached',
-        }
 
 memcached_config = {
         'node_type':'memcached',
@@ -107,17 +87,13 @@ memcached_config = {
         'password':'guest',
         'spec':spec_path,
         'load_app_script':False,
-        'config_app_script':False,
+        'config_app':False,
         'run_app_script':run_memcached_script,
-        'node_config_dict':memcached_config_dict,
         }
  
 memcached = Unit(memcached_config, ec2)
 
 run_rabbit_script = magnet_path + '/scripts/run_rabbitmq.sh'
-rabbitmq_config_dict = {
-        'private_dns_name':'rabbit',
-        }
 rabbitmq_config = {
         'node_type':'rabbitmq',
         'ami_id':'ami-672bcf0e',
@@ -129,15 +105,13 @@ rabbitmq_config = {
         'password':'guest',
         'spec':spec_path,
         'load_app_script':False,
-        'config_app_script':False,
+        'config_app':False,
         'run_app_script':run_rabbit_script,
-        'node_config_dict':rabbitmq_config_dict,
         }
  
 rabbitmq = Unit(rabbitmq_config, ec2)
 
 
-provisioner = Provisioner()
 
 erddap_util.setServiceParent(provisioner)
 erddap_crawl.setServiceParent(provisioner)

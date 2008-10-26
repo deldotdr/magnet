@@ -6,6 +6,7 @@ Every Task has a amqp channel.
 import os
 import commands
 import urllib2
+from string import Template
 
 from zope.interface import Interface
 
@@ -158,18 +159,8 @@ class ReportHostname(Task):
         reactor.callLater(0, self.operation)
 
     def operation(self, *args):
-        public_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/public-hostname").read()
-        private_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/local-hostname").read()
-        instance_id = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/instance-id").read()
-        self.parent.instance_id = instance_id
-        self.parent.public_dns_name = public_dns_name
-        self.parent.private_dns_name = private_dns_name
-#        content = {
-#                'public_dns_name':public_dns_name,
-#                'private_dns_name':private_dns_name,
-#                'instance_id':instance_id}
-#         content = str(content)
-        content = instance_id
+        self.parent.get_user_and_meta_data()
+        content = self.parent.user_meta_data['instance_id']
         self.sendMessage(content)
 
 
@@ -188,7 +179,7 @@ class RunScript(Task):
         Receive script in message. Run script.
         """
         script = args[0]
-        cmd = write_script_file(script)
+        cmd = write_script_file(script, var_dict=self.parent.user_meta_data)
         status, output = commands.getstatusoutput(cmd)
         msg = {'status':status, 'output':output}
         msg = str(msg)
@@ -265,6 +256,38 @@ class ConfigDictConsumer(Task):
         msg = 'it might have worked...'
         self.parent.getServiceNamed('status').sendMessage(msg)
 
+class ConfigTemplateConsumer(Task):
+    """Agents accept a message dictionary with key/values:
+        config_templ:[str of config template]
+        path:[path to write file]
+    Use string.Template substituion to fill in dns names and user data.
+    Write the final script file to [path]
+    """
+
+    name = 'config_templ'
+    exchange = 'config_templ'
+    type = 'consume'
+
+    def operation(self, msg):
+        msg_dict = eval(msg)
+        config_templ = msg_dict['config_templ']
+        config_final = Template(config_templ).substitute(self.user_meta_data)
+
+
+class AllNodeDnsConsumer(Task):
+
+    name = 'dns'
+    exchange = 'dns'
+    type = 'consume'
+
+    def operation(self, msg):
+        msg_dict = eval(msg)
+        self.dns_dict = msg_dict
+        self.user_meta_data.update(self.dns_dict)
+        res_msg = str({'status':0, 'output':'got dns dict'})
+        self.parent.getServiceNamed('status').sendMessage(res_msg)
+
+
 
 
 
@@ -275,23 +298,34 @@ def read_script_file(path):
     return s
 
 
-def write_script_file(script):
+def write_script_file(script, var_dict=None):
     """write temp script file and return file name to be executed as a
     command.
+    Put env variables at the top.
     """
+    if var_dict:
+        headers = shell_script_env_var_header(var_dict)
+        script = headers + script
     # home = os.getenv('HOME')
     # fname = os.path.join(home,'remote_command.sh')
     cur_dir = os.getcwd()
     print 'writing script in this dir: ', cur_dir
     fname = os.path.join(cur_dir, 'remote_command.sh')
     f = open(fname, 'w')
-    print 'writing this content: ', script
     f.write(script)
+    print 'writing this content: ', script
     f.close()
     os.chmod(fname, 0755)
     cmd = fname
     return cmd
     
+def shell_script_env_var_header(user_meta_data):
+    header = '#!/bin/bash\n'
+    header += '# Auto-generated list of environment variables\n' 
+    for k,v in user_meta_data.iteritems():
+        header += 'export %s=%s\n' % (k, v,)
+    return header
+
 
 
 
@@ -317,13 +351,44 @@ class AMQPService(service.MultiService):
         self.factory.onConn.addCallback(self.gotClient)
 
     def startService(self):
-        reactor.connectTCP(self.host, self.port, self.factory)
+        self.connector = reactor.connectTCP(self.host, self.port, self.factory)
+
+    def stopService(self):
+        self.connector.disconnect()
+
 
     @defer.inlineCallbacks
     def gotClient(self, client):
         yield client.start({"LOGIN":self.username, "PASSWORD":self.password})
         self.client = client
         service.MultiService.startService(self)
+
+
+class Agent(AMQPService):
+
+
+    def get_user_and_meta_data(self):
+        user_data = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "user-data").read()
+        user_data = dict([d.split('=') for d in user_data.split()])
+        self.user_data = user_data
+
+        public_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/public-hostname").read()
+        private_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/local-hostname").read()
+        instance_id = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/instance-id").read()
+        self.instance_id = instance_id
+        meta_data = {
+                'this_public_dns_name':public_dns_name,
+                'this_private_dns_name':private_dns_name,
+                'this_instance_id':instance_id,
+                }
+        self.meta_data = meta_data
+        self.user_meta_data = {}
+        self.user_meta_data.update(user_data)
+        self.user_meta_data.update(meta_data)
+ 
+ 
+
+
 
 
 

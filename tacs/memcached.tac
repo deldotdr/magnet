@@ -13,18 +13,21 @@ import urllib2
 
 from twisted.application import service
 
-from magnet.agent.service import AMQPService
+from magnet.agent.service import Agent
 from magnet.agent.service import ReportHostname
 from magnet.agent.service import RunScript
 from magnet.agent.service import Status
-from magnet.agent.service import ConfigDictConsumer
+from magnet.agent.service import AllNodeDnsConsumer
+from magnet.agent.service import ConfigTemplateConsumer
 from magnet.agent.service import INSTANCE_DATA_BASE_URL
 
 import magnet
 spec_path = magnet.__path__[0] + '/amqp0-8.xml'
 
 node_type = 'bad-user-data'
-node_type = urllib2.urlopen(INSTANCE_DATA_BASE_URL + 'user-data').read()
+user_data = urllib2.urlopen(INSTANCE_DATA_BASE_URL + 'user-data').read()
+user_data = dict([d.split('=') for d in user_data.split()])
+node_type = user_data['node_type']
 
 print 'Node_type (from user data): ', node_type
 
@@ -39,7 +42,7 @@ config = {
     }
 
 
-agent_service = AMQPService(config)
+agent_service = Agent(config)
 
 config_task_announce = {
             'exchange':'announce',
@@ -59,21 +62,30 @@ config_task_runscript = {
             'node_type':node_type,
             }
 
-config_task_consume_config_dict = {
-            'exchange':'config_dict',
+config_task_consume_config_templ = {
+            'exchange':'config_templ',
+            'routing_key':node_type,
+            'node_type':node_type,
+            }
+
+config_task_dns = {
+            'exchange':'dns',
             'routing_key':node_type,
             'node_type':node_type,
             }
 
 
 
+
 task_announce = ReportHostname(config_task_announce)
 task_status =  Status(config_task_status)
+task_dns = AllNodeDnsConsumer(config_task_dns)
 task_runscript = RunScript(config_task_runscript)
-task_config_dict = ConfigDictConsumer(config_task_consume_config_dict)
+task_config_templ = ConfigTemplateConsumer(config_task_consume_config_templ)
 
 task_announce.setServiceParent(agent_service)
 task_status.setServiceParent(agent_service)
+task_dns.setServiceParent(agent_service)
 task_runscript.setServiceParent(agent_service)
 task_config_dict.setServiceParent(agent_service)
 
