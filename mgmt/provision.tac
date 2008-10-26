@@ -48,7 +48,7 @@ erddap_util_config = {
         }
 
 
-erddap_util = Unit(erddap_util_config, ec2)
+erddap_util = Unit(erddap_util_config)
 
 
 erddap_crawl_setup = magnet_path + '/scripts/erddap_crawl_setup.xml'
@@ -71,7 +71,7 @@ erddap_crawl_config = {
 
 
 
-erddap_crawl = Unit(erddap_crawl_config, ec2)
+erddap_crawl = Unit(erddap_crawl_config)
 
 
 run_memcached_script = magnet_path + '/scripts/run_memcached.sh'
@@ -91,7 +91,7 @@ memcached_config = {
         'run_app_script':run_memcached_script,
         }
  
-memcached = Unit(memcached_config, ec2)
+memcached = Unit(memcached_config)
 
 run_rabbit_script = magnet_path + '/scripts/run_rabbitmq.sh'
 rabbitmq_config = {
@@ -109,14 +109,13 @@ rabbitmq_config = {
         'run_app_script':run_rabbit_script,
         }
  
-rabbitmq = Unit(rabbitmq_config, ec2)
+rabbitmq = Unit(rabbitmq_config)
 
 
 
 erddap_util.setServiceParent(provisioner)
 erddap_crawl.setServiceParent(provisioner)
 memcached.setServiceParent(provisioner)
-rabbitmq.setServiceParent(provisioner)
 
 
 from twisted.application import internet

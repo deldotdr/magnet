@@ -117,6 +117,7 @@ class EC2Provisioner(Provisioner):
         self.amqp_spec_path = spec_path
         self.aws_access_key = aws_access_key
         self.aws_secret_access_key = aws_secret_access_key
+        service.MultiService.__init__(self)
 
 
     def startService(self):
