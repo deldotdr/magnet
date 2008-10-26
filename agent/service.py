@@ -380,6 +380,7 @@ class Agent(AMQPService):
                 'this_public_dns_name':public_dns_name,
                 'this_private_dns_name':private_dns_name,
                 'this_instance_id':instance_id,
+                'instance_id':instance_id,
                 }
         self.meta_data = meta_data
         self.user_meta_data = {}
