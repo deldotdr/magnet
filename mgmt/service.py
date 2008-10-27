@@ -279,7 +279,7 @@ class Unit(AMQPService):
         ami_id = self.config['ami_id']
         N = self.config['num_insts']
         node_type = self.config['node_type']
-        provision_exchange = self.provision_exchange
+        provision_exchange = self.parent.provision_exchange
         user_data = 'node_type='+node_type + ' ' 
         user_data += 'provision_exchange='+provision_exchange + ' '
         user_data += self.config['user-data']
