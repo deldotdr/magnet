@@ -86,7 +86,7 @@ rabbitmq_config = {
         'user-data':'',
         'load_app_script':False,
         'config_app':False,
-        'run_app_script':run_rabbit_script,
+        'run_app_script':False,
         }
  
 rabbitmq = Unit(rabbitmq_config, broker_config)
