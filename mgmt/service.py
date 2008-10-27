@@ -279,6 +279,7 @@ class Unit(AMQPService):
         print 'Starting ', N, 'nodes of ', node_type, ami_id
         self.reservation = self.parent.ec2.run_instances(ami_id, min_count=N,
                 max_count=N, user_data=user_data)
+        # InstanceAnnounceConsumer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
         InstanceAnnounceConsumer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
         TopicCommandProducer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
         SendConfigTemplate({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
@@ -335,6 +336,7 @@ class Unit(AMQPService):
     def sendDnsNames(self, dns_names):
         """Send a dictionary of all nodes dns names
         """
+        print 'sending dns names ', self.node_type
         self.getServiceNamed('dns').operation(dns_names)
 
     def startLoadApp(self):

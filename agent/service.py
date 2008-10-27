@@ -88,7 +88,29 @@ class BaseTask(object):
     def operation(self, *args):
         pass
 
-        
+class Conversation(service.Service, BaseTask):
+    """Every conversation needs a producer and a consumer.
+    For the sake of consistency, all members of a specific conversation
+    are derived from here.
+    """
+
+    def __init__(self, name, role, exchange, routing_key):
+        self.name = name
+        self.role = role
+        self.exchange = exchange
+        self.routing_key = routing_key
+
+    def startService(self):
+        self.running = True
+        client = self.parent.client
+        getattr(self, 'start_%s' % self.type)(client)
+
+    def stopService(self):
+        self.running = False
+        if self.channel:
+            self.channel.channel_close()
+
+
 class Task(service.Service, BaseTask):
 
     name = None
@@ -285,7 +307,7 @@ class AllNodeDnsConsumer(Task):
         self.dns_dict = msg_dict
         self.parent.user_meta_data.update(self.dns_dict)
         res_msg = str({'status':0, 'output':'got dns dict'})
-        self.parent.getServiceNamed('status').sendMessage(res_msg)
+        # self.parent.getServiceNamed('status').sendMessage(res_msg)
 
 
 
