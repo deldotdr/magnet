@@ -117,9 +117,10 @@ class Task(service.Service, BaseTask):
     type = None
 
     def __init__(self, config):
-        # self.exchange = config['exchange']
+        self.exchange = config['exchange']
         self.node_type = config['node_type']
-        self.routing_key = config['routing_key']
+        # self.routing_key = config['routing_key']
+        self.routing_key = self.node_type + '.' + self.name
         self.config = config
 
     def startService(self):
@@ -162,7 +163,6 @@ class PeriodicTask(internet.TimerService, BaseTask):
 class Status(Task):
 
     name = 'status'
-    exchange = 'status'
     type = 'produce'
 
     def operation(self, *args):
@@ -171,9 +171,8 @@ class Status(Task):
 
 class ReportHostname(Task):
 
-    name = 'reporthostname'
+    name = 'running'
     type = 'produce'
-    exchange = 'announce'
 
     def startService(self):
         client = self.parent.client
@@ -182,8 +181,10 @@ class ReportHostname(Task):
 
     def operation(self, *args):
         self.parent.get_user_and_meta_data()
-        content = self.parent.user_meta_data['instance_id']
-        self.sendMessage(content)
+        instance_id = self.parent.user_meta_data['instance_id']
+        msg = {'instance_id':instance_id} 
+        msg = str(msg)
+        self.sendMessage(msg)
 
 
 
@@ -193,7 +194,6 @@ class RunScript(Task):
 
     name = 'runscript'
     type = 'consume'
-    exchange = 'command'
     queue = ''
 
     def operation(self, *args):
@@ -210,7 +210,6 @@ class RunScript(Task):
 class SendScript(Task):
 
     name = 'sendscript'
-    exchange = ''
     type = 'produce'
     script_path = None
 
@@ -222,7 +221,6 @@ class TopicCommandProducer(Task):
 
     name = 'runscript'
     type = 'produce'
-    exchange = 'command'
     script_path = None
 
     def operation(self, *args):
@@ -235,7 +233,6 @@ class TopicConsumer(Task):
 
     name = 'status'
     type = 'consume'
-    exchange = 'status'
 
     def operation(self, *args):
         msg = args[0]
@@ -258,7 +255,6 @@ class ConfigDictConsumer(Task):
     """
 
     name = 'config_dict'
-    exchange = 'config_dict'
     type = 'consume'
 
     def operation(self, *args):
@@ -287,7 +283,6 @@ class ConfigTemplateConsumer(Task):
     """
 
     name = 'config_templ'
-    exchange = 'config_templ'
     type = 'consume'
 
     def operation(self, msg):
@@ -306,7 +301,6 @@ class ConfigTemplateConsumer(Task):
 class AllNodeDnsConsumer(Task):
 
     name = 'dns'
-    exchange = 'dns'
     type = 'consume'
 
     def operation(self, msg):
@@ -372,10 +366,10 @@ class AMQPService(service.MultiService):
 
     def __init__(self, config):
         service.MultiService.__init__(self)
-        self.host = config['host']
-        self.port = config['port']
-        self.username = config['username']
-        self.password = config['password']
+        self.host = config['broker_host']
+        self.port = config['broker_port']
+        self.username = config['broker_username']
+        self.password = config['broker_password']
         self.factory = AMQPClientFactory(config)
         self.factory.onConn.addCallback(self.gotClient)
 

@@ -36,9 +36,9 @@ class AMQPClientFactory(protocol.ClientFactory):
     protocol = SimpleAMQClient
 
     def __init__(self, config):
-        self.host = config['host']
-        self.vhost = config['vhost']
-        self.spec = qpid.spec.load(config['spec'])
+        self.host = config['broker_host']
+        self.vhost = config['broker_vhost']
+        self.spec = qpid.spec.load(config['amqp_spec_path'])
         self.onConn = defer.Deferred()
 
     def buildProtocol(self, addr):

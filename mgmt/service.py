@@ -107,6 +107,7 @@ class EC2Provisioner(Provisioner):
                         broker_vhost='/',
                         broker_username='guest',
                         broker_password='guest',
+                        provision_exchange='provision',
                         amqp_spec_path=spec_path,
                         aws_access_key=None, 
                         aws_secret_access_key=None):
@@ -115,9 +116,18 @@ class EC2Provisioner(Provisioner):
         self.broker_vhost = broker_vhost
         self.broker_username = broker_username
         self.broker_password = broker_password
+        self.provision_exchange=provision_exchange,
         self.amqp_spec_path = spec_path
         self.aws_access_key = aws_access_key
         self.aws_secret_access_key = aws_secret_access_key
+        self.broker_config = {
+                        'broker_host'=broker_host,
+                        'broker_port'=broker_port,
+                        'broker_vhost'=broker_vhost,
+                        'broker_username'=broker_username,
+                        'broker_password'=broker_password,
+                        'amqp_spec_path'=amqp_spec_path,
+                        }
         service.MultiService.__init__(self)
 
 
@@ -131,24 +141,24 @@ class EC2Provisioner(Provisioner):
 
 
 
+class ModeSwitchingStatusConsumer(TopicConsumer):
+
+    name = 'status'
+    mode = 'setInstanceConfirmOn'
+
+    def set_mode(self, mode):
+        self.mode = mode
+
+    def operation(self, *args):
+        msg = args[0]
+        getattr(self.parent, mode)(msg)
 
 
-default_AMI_config = {
-        'node_type':None,
-        'ami_id':None,
-        'num_insts':None,
-        'host':None,
-        'port':5672,
-        'vhost':'/',
-        'username':'guest',
-        'password':'guest',
-        }
-        
+
 
 class InstanceAnnounceConsumer(TopicConsumer):
 
     name = 'inst_ann_consumer'
-    exchange = 'announce'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -157,7 +167,6 @@ class InstanceAnnounceConsumer(TopicConsumer):
 class LoadAppResponseConsumer(TopicConsumer):
 
     name = 'load_app_resp_consumer'
-    exchange = 'status'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -166,7 +175,6 @@ class LoadAppResponseConsumer(TopicConsumer):
 class ConfigAppResponseConsumer(TopicConsumer):
 
     name = 'config_app_resp_consumer'
-    exchange = 'status'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -175,7 +183,6 @@ class ConfigAppResponseConsumer(TopicConsumer):
 class RunAppResponseConsumer(TopicConsumer):
 
     name = 'run_app_resp_consumer'
-    exchange = 'status'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -185,7 +192,6 @@ class ConfigDictCommandProducer(Task):
 
     name = 'config_dict'
     type = 'produce'
-    exchange = 'config_dict'
 
     def operation(self, *args):
         """
@@ -199,7 +205,6 @@ class ConfigDictCommandProducer(Task):
 class SendConfigTemplate(Task):
 
     name = 'config_templ'
-    exchange = 'config_templ'
     type = 'produce'
 
     def operation(self, config_dict):
@@ -213,7 +218,6 @@ class SendConfigTemplate(Task):
 class SendAllDnsNames(Task):
 
     name = 'dns'
-    exchange = 'dns'
     type = 'produce'
 
     def operation(self, dns_dict):
@@ -238,10 +242,11 @@ class Unit(AMQPService):
     ready_for_config = False
     public_dns_names = []
 
-    def __init__(self, config):
+    def __init__(self, unit_config):
         # config = default_AMI_config.update(config)
-        self.config = config
-        AMQPService.__init__(self, config)
+        self.config = unit_config
+        broker_config = self.parent.broker_config
+        AMQPService.__init__(self, broker_config)
         self.name = self.node_type = self.config['node_type']
         self.num_insts = self.config['num_insts']
 
@@ -274,16 +279,23 @@ class Unit(AMQPService):
         ami_id = self.config['ami_id']
         N = self.config['num_insts']
         node_type = self.config['node_type']
-        user_data = 'node_type='+node_type + ' ' + self.config['user-data']
+        provision_exchange = self.provision_exchange
+        user_data = 'node_type='+node_type + ' ' 
+        user_data += 'provision_exchange='+provision_exchange + ' '
+        user_data += self.config['user-data']
+        unit_handler_config = {
+                'node_type':node_type,
+                'exchange':provision_exchange,
+                }
         self.status = 'starting'
         print 'Starting ', N, 'nodes of ', node_type, ami_id
         self.reservation = self.parent.ec2.run_instances(ami_id, min_count=N,
                 max_count=N, user_data=user_data)
         # InstanceAnnounceConsumer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
-        InstanceAnnounceConsumer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
-        TopicCommandProducer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
-        SendConfigTemplate({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
-        SendAllDnsNames({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
+        ModeSwitchingStatusConsumer(unit_handler_config).setServiceParent(self)
+        TopicCommandProducer(unit_handler_config).setServiceParent(self)
+        SendConfigTemplate(unit_handler_config).setServiceParent(self)
+        SendAllDnsNames(unit_handler_config).setServiceParent(self)
         AMQPService.startService(self)
 
     def stopService(self):
@@ -298,7 +310,7 @@ class Unit(AMQPService):
         if self.instances_confirmed == self.num_insts:
             print 'All ', self.num_insts, ' ', self.node_type, 'instances loaded'
             self.ready_for_load_app = True
-            self.getServiceNamed('inst_ann_consumer').stopService()
+            self.getServiceNamed('status').set_mode('setInstacnceConfirmLoaded')
             for i in self.reservation.instances:
                 i.update()
             self.public_dns_names = [i.public_dns_name for i in self.reservation.instances]
@@ -311,7 +323,8 @@ class Unit(AMQPService):
         if self.apps_loaded == self.num_insts:
             print 'all instances of', self.name, ' loaded'
             self.ready_for_config = True
-            self.getServiceNamed('load_app_resp_consumer').stopService()
+            # self.getServiceNamed('load_app_resp_consumer').stopService()
+            self.getServiceNamed('status').set_mode('setInstacnceConfirmConfiged')
             self.parent.setUnitReadyForConfigApp(self.node_type)
 
     def setInstacnceConfirmConfiged(self, instance_id):
@@ -320,7 +333,8 @@ class Unit(AMQPService):
         if self.apps_configed == self.num_insts:
             print 'all instances of', self.name, ' configured'
             self.ready_for_run = True
-            self.getServiceNamed('config_app_resp_consumer').stopService()
+            # self.getServiceNamed('config_app_resp_consumer').stopService()
+            self.getServiceNamed('status').set_mode('setInstacnceConfirmRunning')
             self.parent.setUnitReadyForRunApp(self.node_type)
 
     def setInstacnceConfirmRunning(self, instance_id):
@@ -328,7 +342,8 @@ class Unit(AMQPService):
         self.apps_running += 1
         if self.apps_running == self.num_insts:
             print 'all instances of', self.name, ' running!'
-            self.getServiceNamed('run_app_resp_consumer').stopService()
+            # self.getServiceNamed('run_app_resp_consumer').stopService()
+            # self.getServiceNamed('status').set_mode()
             self.status = 'finished'
             self.parent.setUnitFinished(self.node_type)
 
@@ -346,7 +361,7 @@ class Unit(AMQPService):
         print 'Start Load App for Unit ', self.name
         load_app_script = self.config['load_app_script']
         if load_app_script:
-            LoadAppResponseConsumer({'node_type':self.node_type, 'routing_key':self.node_type}).setServiceParent(self)
+            # LoadAppResponseConsumer({'node_type':self.node_type, 'routing_key':self.node_type}).setServiceParent(self)
             self.getServiceNamed('runscript').operation(load_app_script)
         else:
             self.ready_for_config = True
@@ -365,7 +380,7 @@ class Unit(AMQPService):
             script_templ = f.read()
             f.close()
             config_dict = {'config_templ':script_templ, 'path':final_setup_path}
-            ConfigAppResponseConsumer({'node_type':self.node_type,'routing_key':self.node_type}).setServiceParent(self)
+            # ConfigAppResponseConsumer({'node_type':self.node_type,'routing_key':self.node_type}).setServiceParent(self)
             self.getServiceNamed('config_templ').operation(config_dict)
         else:
             self.ready_for_run = True
@@ -376,7 +391,7 @@ class Unit(AMQPService):
         print 'Run App on node ', self.node_type
         run_app_script = self.config['run_app_script']
         if run_app_script:
-            RunAppResponseConsumer({'node_type':self.node_type, 'routing_key':self.node_type}).setServiceParent(self)
+            # RunAppResponseConsumer({'node_type':self.node_type, 'routing_key':self.node_type}).setServiceParent(self)
             self.getServiceNamed('runscript').operation(run_app_script)
 
 

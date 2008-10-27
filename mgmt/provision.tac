@@ -14,13 +14,13 @@ from magnet.mgmt.service import EC2Provisioner
 AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
-if AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY:
-    pass
-else:
+if not (AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY):
     print 'Need AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY environment variables'
     sys.exit(1)
 
-provisioner = EC2Provisioner(aws_access_key=AWS_ACCESS_KEY, 
+provisioner = EC2Provisioner(broker_host='rabbitmq.amoeba.ucsd.edu',
+                            provision_exchange='ddn-provision',
+                            aws_access_key=AWS_ACCESS_KEY, 
                             aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
 
  
@@ -34,12 +34,6 @@ erddap_util_config = {
         'ami_id':'ami-b62acedf',
         'num_insts':2,
         'user-data':'',
-        'host':'rabbitmq.amoeba.ucsd.edu',
-        'port':5672,
-        'vhost':'/',
-        'username':'guest',
-        'password':'guest',
-        'spec':spec_path,
         'load_app_script':load_erddap_script,
         'setup_templ':erddap_util_setup,
         'final_setup_path':final_setup_path,
@@ -57,12 +51,6 @@ erddap_crawl_config = {
         'ami_id':'ami-b62acedf',
         'num_insts':2,
         'user-data':'',
-        'host':'rabbitmq.amoeba.ucsd.edu',
-        'port':5672,
-        'vhost':'/',
-        'username':'guest',
-        'password':'guest',
-        'spec':spec_path,
         'load_app_script':load_erddap_script,
         'setup_templ':erddap_crawl_setup,
         'final_setup_path':final_setup_path,
@@ -82,12 +70,6 @@ memcached_config = {
         'ami_id':'ami-3631d55f',
         'num_insts':1,
         'user-data':'',
-        'host':'rabbitmq.amoeba.ucsd.edu',
-        'port':5672,
-        'vhost':'/',
-        'username':'guest',
-        'password':'guest',
-        'spec':spec_path,
         'load_app_script':False,
         'config_app':False,
         'run_app_script':run_memcached_script,
@@ -98,15 +80,9 @@ memcached = Unit(memcached_config)
 run_rabbit_script = magnet_path + '/scripts/run_rabbitmq.sh'
 rabbitmq_config = {
         'node_type':'rabbitmq',
-        'ami_id':'ami-672bcf0e',
+        'ami_id':'ami-043fdb6d',
         'num_insts':1,
         'user-data':'',
-        'host':'rabbitmq.amoeba.ucsd.edu',
-        'port':5672,
-        'vhost':'/',
-        'username':'guest',
-        'password':'guest',
-        'spec':spec_path,
         'load_app_script':False,
         'config_app':False,
         'run_app_script':run_rabbit_script,
@@ -119,6 +95,7 @@ rabbitmq = Unit(rabbitmq_config)
 erddap_util.setServiceParent(provisioner)
 erddap_crawl.setServiceParent(provisioner)
 memcached.setServiceParent(provisioner)
+rabbitmq.setServiceParent(provisioner)
 
 
 from twisted.application import internet
