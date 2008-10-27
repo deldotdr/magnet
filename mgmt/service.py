@@ -151,7 +151,7 @@ class ModeSwitchingStatusConsumer(TopicConsumer):
 
     def operation(self, *args):
         msg = args[0]
-        getattr(self.parent, mode)(msg)
+        getattr(self.parent, self.mode)(msg)
 
 
 
