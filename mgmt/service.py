@@ -116,7 +116,7 @@ class EC2Provisioner(Provisioner):
         self.broker_vhost = broker_vhost
         self.broker_username = broker_username
         self.broker_password = broker_password
-        self.provision_exchange=provision_exchange,
+        self.provision_exchange = provision_exchange
         self.amqp_spec_path = spec_path
         self.aws_access_key = aws_access_key
         self.aws_secret_access_key = aws_secret_access_key
@@ -245,6 +245,7 @@ class Unit(AMQPService):
     def __init__(self, unit_config, broker_config):
         # config = default_AMI_config.update(config)
         self.config = unit_config
+        self.broker_config = broker_config
         # broker_config = self.parent.broker_config
         AMQPService.__init__(self, broker_config)
         self.name = self.node_type = self.config['node_type']
