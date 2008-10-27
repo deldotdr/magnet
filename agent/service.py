@@ -293,7 +293,12 @@ class ConfigTemplateConsumer(Task):
     def operation(self, msg):
         msg_dict = eval(msg)
         config_templ = msg_dict['config_templ']
+        final_path = msg_dict['path'] 
         config_final = Template(config_templ).substitute(self.parent.user_meta_data)
+        print 'writing this config file', final_path, config_final
+        f = open(final_path, 'w')
+        f.write(config_final)
+        f.close()
         msg = 'config might have worked...'
         self.parent.getServiceNamed('status').sendMessage(msg)
 
