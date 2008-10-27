@@ -294,6 +294,8 @@ class ConfigTemplateConsumer(Task):
         msg_dict = eval(msg)
         config_templ = msg_dict['config_templ']
         config_final = Template(config_templ).substitute(self.parent.user_meta_data)
+        msg = 'config might have worked...'
+        self.parent.getServiceNamed('status').sendMessage(msg)
 
 
 class AllNodeDnsConsumer(Task):
