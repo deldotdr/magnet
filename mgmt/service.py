@@ -242,10 +242,10 @@ class Unit(AMQPService):
     ready_for_config = False
     public_dns_names = []
 
-    def __init__(self, unit_config):
+    def __init__(self, unit_config, broker_config):
         # config = default_AMI_config.update(config)
         self.config = unit_config
-        broker_config = self.parent.broker_config
+        # broker_config = self.parent.broker_config
         AMQPService.__init__(self, broker_config)
         self.name = self.node_type = self.config['node_type']
         self.num_insts = self.config['num_insts']

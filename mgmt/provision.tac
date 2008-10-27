@@ -23,6 +23,7 @@ provisioner = EC2Provisioner(broker_host='rabbitmq.amoeba.ucsd.edu',
                             aws_access_key=AWS_ACCESS_KEY, 
                             aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
 
+broker_config = provisioner.broker_config
  
 
 load_erddap_script = magnet_path + '/scripts/load_erddap.sh'
@@ -42,7 +43,7 @@ erddap_util_config = {
         }
 
 
-erddap_util = Unit(erddap_util_config)
+erddap_util = Unit(erddap_util_config, broker_config)
 
 
 erddap_crawl_setup = magnet_path + '/scripts/erddap_crawl_setup.xml'
@@ -60,7 +61,7 @@ erddap_crawl_config = {
 
 
 
-erddap_crawl = Unit(erddap_crawl_config)
+erddap_crawl = Unit(erddap_crawl_config, broker_config)
 
 
 run_memcached_script = magnet_path + '/scripts/run_memcached.sh'
@@ -75,7 +76,7 @@ memcached_config = {
         'run_app_script':run_memcached_script,
         }
  
-memcached = Unit(memcached_config)
+memcached = Unit(memcached_config, broker_config)
 
 run_rabbit_script = magnet_path + '/scripts/run_rabbitmq.sh'
 rabbitmq_config = {
@@ -88,7 +89,7 @@ rabbitmq_config = {
         'run_app_script':run_rabbit_script,
         }
  
-rabbitmq = Unit(rabbitmq_config)
+rabbitmq = Unit(rabbitmq_config, broker_config)
 
 
 

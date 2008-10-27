@@ -28,6 +28,7 @@ node_type = 'bad-user-data'
 user_data = urllib2.urlopen(INSTANCE_DATA_BASE_URL + 'user-data').read()
 user_data = dict([d.split('=') for d in user_data.split()])
 node_type = user_data['node_type']
+provision_exchange = user_data['provision_exchange']
 
 print 'Node_type (from user data): ', node_type
 
@@ -45,31 +46,31 @@ config = {
 agent_service = Agent(config)
 
 config_task_announce = {
-            'exchange':'announce',
+            'exchange':provision_exchange,
             'routing_key':node_type,
             'node_type':node_type,
             }
 
 config_task_status = {
-            'exchange':'status',
+            'exchange':provision_exchange,
             'routing_key':node_type,
             'node_type':node_type,
             }
 
 config_task_runscript = {
-            'exchange':'command',
+            'exchange':provision_exchange,
             'routing_key':node_type,
             'node_type':node_type,
             }
 
 config_task_consume_config_templ = {
-            'exchange':'config_templ',
+            'exchange':provision_exchange,
             'routing_key':node_type,
             'node_type':node_type,
             }
 
 config_task_dns = {
-            'exchange':'dns',
+            'exchange':provision_exchange,
             'routing_key':node_type,
             'node_type':node_type,
             }
