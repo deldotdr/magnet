@@ -40,6 +40,10 @@ True works the same regardless of which dataset Map is used.
 <!-- ******** Messaging Configuration ************* -->
 <BrokerHostname>$DNS_RABBITMQ_0</BrokerHostname>
 <BrokerPort></BrokerPort>
+<Username>ddnuser</Username>
+<Password>pw4ddnpass</Password>
+<VHost>/</VHost>
+<Realm>/data</Realm>
 <Exchange>dataset</Exchange>
 <LoadTopic>crawler.load</LoadTopic>
 <StatusTopic>crawler.status</StatusTopic>
