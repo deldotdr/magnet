@@ -274,7 +274,7 @@ class Unit(AMQPService):
         ami_id = self.config['ami_id']
         N = self.config['num_insts']
         node_type = self.config['node_type']
-        user_data = 'node_type='+node_type
+        user_data = 'node_type='+node_type + ' ' + self.config['user-data']
         self.status = 'starting'
         print 'Starting ', N, 'nodes of ', node_type, ami_id
         self.reservation = self.parent.ec2.run_instances(ami_id, min_count=N,
