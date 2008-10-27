@@ -121,12 +121,12 @@ class EC2Provisioner(Provisioner):
         self.aws_access_key = aws_access_key
         self.aws_secret_access_key = aws_secret_access_key
         self.broker_config = {
-                        'broker_host'=broker_host,
-                        'broker_port'=broker_port,
-                        'broker_vhost'=broker_vhost,
-                        'broker_username'=broker_username,
-                        'broker_password'=broker_password,
-                        'amqp_spec_path'=amqp_spec_path,
+                        'broker_host':broker_host,
+                        'broker_port':broker_port,
+                        'broker_vhost':broker_vhost,
+                        'broker_username':broker_username,
+                        'broker_password':broker_password,
+                        'amqp_spec_path':amqp_spec_path,
                         }
         service.MultiService.__init__(self)
 
