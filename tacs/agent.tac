@@ -34,12 +34,12 @@ print 'Node_type (from user data): ', node_type
 
 # Client config object
 config = {
-        'host':'rabbitmq.amoeba.ucsd.edu',
-        'port':5672,
-        'vhost':'/',
-        'spec':spec_path,
-        'username':'guest',
-        'password':'guest',
+        'broker_host':'rabbitmq.amoeba.ucsd.edu',
+        'broker_port':5672,
+        'broker_vhost':'/',
+        'amqp_spec_path':spec_path,
+        'broker_username':'guest',
+        'broker_password':'guest',
     }
 
 
