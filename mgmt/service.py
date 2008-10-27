@@ -144,7 +144,7 @@ class EC2Provisioner(Provisioner):
 class ModeSwitchingStatusConsumer(TopicConsumer):
 
     name = 'status'
-    mode = 'setInstanceConfirmOn'
+    mode = 'setInstacnceConfirmLoaded'
 
     def set_mode(self, mode):
         self.mode = mode
@@ -158,7 +158,7 @@ class ModeSwitchingStatusConsumer(TopicConsumer):
 
 class InstanceAnnounceConsumer(TopicConsumer):
 
-    name = 'inst_ann_consumer'
+    name = 'running'
 
     def operation(self, *args):
         instance_id = args[0]
@@ -293,6 +293,7 @@ class Unit(AMQPService):
         self.reservation = self.parent.ec2.run_instances(ami_id, min_count=N,
                 max_count=N, user_data=user_data)
         # InstanceAnnounceConsumer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
+        InstanceAnnounceConsumer(unit_handler_config).setServiceParent(self)
         ModeSwitchingStatusConsumer(unit_handler_config).setServiceParent(self)
         TopicCommandProducer(unit_handler_config).setServiceParent(self)
         SendConfigTemplate(unit_handler_config).setServiceParent(self)
