@@ -81,7 +81,7 @@ memcached = Unit(memcached_config, broker_config)
 run_rabbit_script = magnet_path + '/scripts/run_rabbitmq.sh'
 rabbitmq_config = {
         'node_type':'rabbitmq',
-        'ami_id':'ami-043fdb6d',
+        'ami_id':'ami-a938dcc0',
         'num_insts':1,
         'user-data':'',
         'load_app_script':False,
