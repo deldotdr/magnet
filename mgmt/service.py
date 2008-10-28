@@ -25,6 +25,7 @@ class Provisioner(service.MultiService):
 
     """
 
+    units_ready_for_dns = 0
     units_ready_for_load_app = 0
     units_ready_for_config_app = 0
     units_ready_for_run_app = 0
@@ -37,10 +38,16 @@ class Provisioner(service.MultiService):
         print 'Provisioner has ', self.num_units
         service.MultiService.startService(self)
 
+    def setUnitReadyForDns(self, unit_name):
+        self.units_ready_for_dns += 1
+        if self.units_ready_for_dns == self.num_units:
+            self.status = 'send dns'
+            self.startSendDnsPhase()
+
+
     def setUnitReadyForLoadApp(self, unit_name):
         self.units_ready_for_load_app += 1
         if self.units_ready_for_load_app == self.num_units:
-            self.sendDnsNames()
             self.status = 'load app'
             self.startLoadAppPhase()
 
@@ -65,7 +72,7 @@ class Provisioner(service.MultiService):
         if self.units_finished == self.num_units:
             self.status = 'finished'
 
-    def sendDnsNames(self):
+    def startSendDnsPhase(self):
         dns_names = {}
         for s in self:
             dns_names.update(s.get_private_dns_names_dict())
@@ -235,6 +242,7 @@ class Unit(AMQPService):
     num_insts = 0
     instances_confirmed = 0
     status = 0
+    apps_dns = 0
     apps_loaded = 0
     apps_configed = 0
     apps_running = 0
@@ -311,12 +319,21 @@ class Unit(AMQPService):
         self.instances_confirmed += 1
         if self.instances_confirmed == self.num_insts:
             print 'All ', self.num_insts, ' ', self.node_type, 'instances loaded'
-            self.ready_for_load_app = True
-            self.getServiceNamed('status').set_mode('setInstacnceConfirmLoaded')
+            self.ready_for_dns = True
+            self.getServiceNamed('status').set_mode('setInstacnceConfirmDns')
             for i in self.reservation.instances:
                 i.update()
             self.public_dns_names = [i.public_dns_name for i in self.reservation.instances]
             self.private_dns_names = [i.private_dns_name for i in self.reservation.instances]
+            self.parent.setUnitReadyForDns(self.node_type)
+
+    def setInstacnceConfirmDns(self, instance_id):
+        print 'Instance ', instance_id, ' of ', self.node_type, 'received dns.'
+        self.apps_dns += 1
+        if self.apps_dns == self.num_insts:
+            print 'all instances of', self.name, ' got dns'
+            self.ready_for_load_app = True
+            self.getServiceNamed('status').set_mode('setInstacnceConfirmLoaded')
             self.parent.setUnitReadyForLoadApp(self.node_type)
 
     def setInstacnceConfirmLoaded(self, instance_id):
@@ -353,6 +370,7 @@ class Unit(AMQPService):
     def sendDnsNames(self, dns_names):
         """Send a dictionary of all nodes dns names
         """
+        self.status = 'send dns'
         print 'sending dns names ', self.node_type
         self.getServiceNamed('dns').operation(dns_names)
 
