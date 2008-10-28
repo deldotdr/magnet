@@ -308,7 +308,7 @@ class AllNodeDnsConsumer(Task):
         self.dns_dict = msg_dict
         self.parent.user_meta_data.update(self.dns_dict)
         res_msg = str({'status':0, 'output':'got dns dict'})
-        # self.parent.getServiceNamed('status').sendMessage(res_msg)
+        self.parent.getServiceNamed('status').sendMessage(res_msg)
 
 
 
