@@ -140,7 +140,7 @@ class Task(service.Service, BaseTask):
 
 class PeriodicTask(internet.TimerService, BaseTask):
 
-    type = 'producer'
+    type = 'produce'
 
     def __init__(self, config):
         self.name = config['name']
@@ -292,8 +292,8 @@ class ConfigTemplateConsumer(Task):
     name = 'config_templ'
     type = 'consume'
 
-    def operation(self, msg):
-        msg_dict = eval(msg)
+    def operation(self, *args):
+        msg_dict = eval(args[0])
         config_templ = msg_dict['config_templ']
         final_path = msg_dict['path'] 
         config_final = Template(config_templ).substitute(self.parent.user_meta_data)
@@ -310,8 +310,8 @@ class AllNodeDnsConsumer(Task):
     name = 'dns'
     type = 'consume'
 
-    def operation(self, msg):
-        msg_dict = eval(msg)
+    def operation(self, *args):
+        msg_dict = eval(args[0])
         self.dns_dict = msg_dict
         self.parent.user_meta_data.update(self.dns_dict)
         res_msg = str({'status':0, 'output':'got dns dict'})
