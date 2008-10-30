@@ -325,7 +325,7 @@ class Unit(AMQPService):
         print 'Instance ', instance_id, ' of ', self.node_type, 'confirmed running.'
         self.instances_confirmed += 1
         if self.instances_confirmed == self.num_insts:
-            if self.config.has_key('use_id'):
+            if self.config.has_key('use_ip'):
                 self.reservation.instances[0].use_ip(self.config['use_ip'])
             print 'All ', self.num_insts, ' ', self.node_type, 'instances loaded'
             self.ready_for_dns = True
