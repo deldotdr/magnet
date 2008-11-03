@@ -444,7 +444,7 @@ def read_config_templ(path):
     script_templ = f.read()
     # the header should have a # then the final path.
     script_templ = script_templ[1:]
-    script_templ = script_templ.strip('\n')
+    script_templ = script_templ.strip('\r\n')
     f.close()
     return (final_setup_path, script_templ)
 
