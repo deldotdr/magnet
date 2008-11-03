@@ -295,12 +295,15 @@ class ConfigTemplateConsumer(Task):
     def operation(self, *args):
         config_templs = eval(args[0])
         output = ''
+        print config_templs
         for c in config_templs:
             final_path = c[0] 
             config_templ = c[1]
             config_final = Template(config_templ).substitute(self.parent.user_meta_data)
-            output += 'writing this config file', final_path, config_final
-            output += '\n'
+            output += 'writing this config file ' + final_path 
+            output += '\n\n'
+            output += config_final
+            output += '\n\n'
             f = open(final_path, 'w')
             f.write(config_final)
             f.close()

@@ -406,7 +406,8 @@ class Unit(AMQPService):
             config_templs = [] 
             config_templ_paths = self.config['config_templ_paths']
             for config_templ in config_templ_paths:
-                config_templs.append(read_config_templ(config_templ))
+                final_setup_path, script_templ = read_config_templ(config_templ)
+                config_templs.append([final_setup_path, script_templ])
             # ConfigAppResponseConsumer({'node_type':self.node_type,'routing_key':self.node_type}).setServiceParent(self)
             self.getServiceNamed('config_templ').operation(config_templs)
         else:
