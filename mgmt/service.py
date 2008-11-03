@@ -442,11 +442,12 @@ def read_config_templ(path):
     f = open(path)
     final_setup_path = f.readline()
     script_templ = f.read()
+    f.close()
+    script_templ.strip('\r\n')
     # the header should have a # then the final path.
     final_setup_path = final_setup_path[1:]
     final_setup_path = final_setup_path.strip('\n')
     final_setup_path = final_setup_path.strip('\r')
-    f.close()
     return (final_setup_path, script_templ)
 
 
