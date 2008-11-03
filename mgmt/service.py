@@ -221,12 +221,12 @@ class SendConfigTemplate(Task):
     name = 'config_templ'
     type = 'produce'
 
-    def operation(self, config_dict):
+    def operation(self, config_templs):
         """config_dict is dict with key/values:
             config_templ:[str of config template]
             path:[path on ami it should be writen]
         """
-        msg = str(config_dict)
+        msg = str(config_templs)
         self.sendMessage(msg)
 
 class SendAllDnsNames(Task):
@@ -403,14 +403,12 @@ class Unit(AMQPService):
         print 'startConfigApp ', self.node_type
         config_app = self.config['config_app']
         if config_app:
-            setup_templ = self.config['setup_templ']
-            final_setup_path = self.config['final_setup_path']
-            f = open(setup_templ)
-            script_templ = f.read()
-            f.close()
-            config_dict = {'config_templ':script_templ, 'path':final_setup_path}
+            config_templs = [] 
+            config_templ_paths = self.config['config_templ_paths']
+            for config_templ in config_templs:
+                setup_templs.append(read_config_templ(setup_templ))
             # ConfigAppResponseConsumer({'node_type':self.node_type,'routing_key':self.node_type}).setServiceParent(self)
-            self.getServiceNamed('config_templ').operation(config_dict)
+            self.getServiceNamed('config_templ').operation(config_templs)
         else:
             self.ready_for_run = True
             self.parent.setUnitReadyForRunApp(self.node_type)
@@ -439,6 +437,12 @@ class Unit(AMQPService):
 
 
 
+def read_config_templ(path):
+    f = open(path)
+    final_setup_path = f.readline()
+    script_templ = f.read()
+    f.close()
+    return (final_setup_path, script_templ)
 
 
 

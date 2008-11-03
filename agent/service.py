@@ -293,15 +293,21 @@ class ConfigTemplateConsumer(Task):
     type = 'consume'
 
     def operation(self, *args):
-        msg_dict = eval(args[0])
-        config_templ = msg_dict['config_templ']
-        final_path = msg_dict['path'] 
-        config_final = Template(config_templ).substitute(self.parent.user_meta_data)
-        print 'writing this config file', final_path, config_final
-        f = open(final_path, 'w')
-        f.write(config_final)
-        f.close()
-        msg = 'config might have worked...'
+        config_templs = eval(args[0])
+        output = ''
+        for c in config_templs:
+            final_path = c[0] 
+            config_templ = c[1]
+            config_final = Template(config_templ).substitute(self.parent.user_meta_data)
+            output += 'writing this config file', final_path, config_final
+            output += '\n'
+            f = open(final_path, 'w')
+            f.write(config_final)
+            f.close()
+            output += config_final
+        status = '0'
+        msg = {'status':status, 'output':output}
+        msg = str(msg)
         self.parent.getServiceNamed('status').sendMessage(msg)
 
 
@@ -400,16 +406,17 @@ class Agent(AMQPService):
         user_data = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "user-data").read()
         user_data = dict([d.split('=') for d in user_data.split()])
         self.user_data = user_data
-
         public_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/public-hostname").read()
         private_dns_name = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/local-hostname").read()
         instance_id = urllib2.urlopen(INSTANCE_DATA_BASE_URL + "meta-data/instance-id").read()
+        ami_launch_index = str(urllib2.urlopen(INSTANCE_DATA_BASE_URL + 'meta-data/ami-launch-index').read())
         self.instance_id = instance_id
         meta_data = {
                 'this_public_dns_name':public_dns_name,
                 'this_private_dns_name':private_dns_name,
                 'this_instance_id':instance_id,
                 'instance_id':instance_id,
+                'ami_launch_index':ami_launch_index,
                 }
         self.meta_data = meta_data
         self.user_meta_data = {}
