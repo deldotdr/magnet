@@ -35,6 +35,7 @@ class BaseTask(object):
     """
     channel = None
     topic = None
+    queue = None # change this to listen n specific queue
 
     @defer.inlineCallbacks
     def start_consume(self, client):
@@ -42,7 +43,7 @@ class BaseTask(object):
         """
         channel = yield client.newChannel()
         yield channel.channel_open()
-        reply = yield channel.queue_declare()
+        reply = yield channel.queue_declare(queue=self.queue)
         yield channel.queue_bind(queue=reply.queue,
                                 exchange=self.exchange,
                                 routing_key=self.routing_key)
@@ -201,7 +202,6 @@ class RunScript(Task):
 
     name = 'runscript'
     type = 'consume'
-    queue = ''
 
     def operation(self, *args):
         """
