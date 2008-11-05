@@ -299,6 +299,7 @@ class Unit(AMQPService):
         user_data = 'node_type='+node_type + ' ' 
         user_data += 'provision_exchange='+provision_exchange + ' '
         user_data += self.config['user-data']
+        zone = self.config['zone'] 
         unit_handler_config = {
                 'node_type':node_type,
                 'exchange':provision_exchange,
@@ -306,7 +307,7 @@ class Unit(AMQPService):
         self.status = 'starting'
         print 'Starting ', N, 'nodes of ', node_type, ami_id
         self.reservation = self.parent.ec2.run_instances(ami_id, min_count=N,
-                max_count=N, user_data=user_data)
+                max_count=N, user_data=user_data, placement=zone)
         # InstanceAnnounceConsumer({'node_type':node_type, 'routing_key':node_type}).setServiceParent(self)
         InstanceAnnounceConsumer(unit_handler_config).setServiceParent(self)
         ModeSwitchingStatusConsumer(unit_handler_config).setServiceParent(self)
