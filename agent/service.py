@@ -43,7 +43,11 @@ class BaseTask(object):
         """
         channel = yield client.newChannel()
         yield channel.channel_open()
-        reply = yield channel.queue_declare(queue=self.queue)
+        if self.queue:
+            reply = yield channel.queue_declare(queue=self.queue)
+        else:
+            reply = yield channel.queue_declare()
+
         yield channel.queue_bind(queue=reply.queue,
                                 exchange=self.exchange,
                                 routing_key=self.routing_key)
