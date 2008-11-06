@@ -369,7 +369,8 @@ class Unit(AMQPService):
         self.apps_running += 1
         if self.apps_running == self.num_insts:
             if self.config.has_key('use_ip'):
-                self.reservation.instances[0].use_ip(self.config['use_ip'])
+                used_ip = self.reservation.instances[0].use_ip(self.config['use_ip'])
+                print 'instance 0 of ', self.node_type, 'use ip == ', used_ip
             print 'all instances of', self.name, ' running!'
             # self.getServiceNamed('run_app_resp_consumer').stopService()
             # self.getServiceNamed('status').set_mode()
