@@ -60,10 +60,11 @@ class BaseTask(object):
     def start_produce(self, client):
         channel = yield client.newChannel()
         self.channel = channel
-        yield self.channel.channel_open()
-        yield self.channel.exchange_declare(exchange=self.exchange, type="topic")
-        defer.returnValue(channel)
+        # yield self.channel.channel_open()
+        # yield self.channel.exchange_declare(exchange=self.exchange, type="topic")
+        defer.returnValue(self.channel)
 
+    @defer.inlineCallbacks
     def sendMessage(self, content):
         print '--------------------begin'
         print 'sendMessage ', content
@@ -72,12 +73,12 @@ class BaseTask(object):
         print 'routing key ', self.routing_key
         print '---------------------end'
         content = Content(content)
-        # yield self.channel.channel_open()
+        yield self.channel.channel_open()
         # yield self.channel.exchange_declare(exchange=self.exchange, type="topic", auto_delete=True)
-        # yield self.channel.exchange_declare(exchange=self.exchange, type="topic")
+        yield self.channel.exchange_declare(exchange=self.exchange, type="topic")
         self.channel.basic_publish(exchange=self.exchange,
             routing_key=self.routing_key, content=content)
-        # yield self.channel.channel_close(reply_code=200, reply_text="Ok")
+        yield self.channel.channel_close(reply_code=200, reply_text="Ok")
 
 
     def gotMessage(self, msg):
