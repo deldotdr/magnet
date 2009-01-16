@@ -333,6 +333,16 @@ class Unit(AMQPService):
             self.getServiceNamed('status').set_mode('setInstacnceConfirmDns')
             for i in self.reservation.instances:
                 i.update()
+            if self.config.has_key('volumes'):
+                insts = self.reservation.instances
+                for inst in insts:
+                    index = int(inst.ami_launch_index)
+                    volume_id = self.config['volumes'][index]['volume_id']
+                    instance_id = inst.id
+                    device = self.config['volumes'][index]['device']
+                    self.parent.ec2.attach_volume(volume_id, instance_id, device)
+
+
             self.public_dns_names = [i.public_dns_name for i in self.reservation.instances]
             self.private_dns_names = [i.private_dns_name for i in self.reservation.instances]
             self.parent.setUnitReadyForDns(self.node_type)
@@ -375,14 +385,7 @@ class Unit(AMQPService):
                 inst.update()
                 used_ip = inst.use_ip(self.config['use_ip'])
                 print 'instance 0 of ', self.node_type, 'use ip == ', used_ip
-            if self.config.has_key('volumes'):
-                insts = self.reservation.instances
-                for inst in insts:
-                    index = int(inst.ami_launch_index)
-                    volume_id = self.config['volumes'][index]['volume_id']
-                    instance_id = inst.id
-                    device = self.config['volumes'][index]['device']
-                    self.parent.ec2.attach_volume(volume_id, instance_id, device)
+
 
             print 'all instances of', self.name, ' running!'
             # self.getServiceNamed('run_app_resp_consumer').stopService()
