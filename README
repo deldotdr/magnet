@@ -1,3 +1,17 @@
 Magnet: Management Agent
 
 AMQP Clients
+
+November 2008
+
+There are several usages of magnet.
+The mgmt module is basically a provisioning agent. service.py contains
+definitions of Twisted service having to do with provisioning a system of
+virtual machines. 
+
+Amazon is currently the only cloud used for deploying virtual machines,
+interfaced using the Boto tool (wrapper of amazon aws api).
+An interface to another cloud could easily be swapped in.
+
+
+

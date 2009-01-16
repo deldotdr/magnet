@@ -155,6 +155,8 @@ class EC2Provisioner(Provisioner):
 
 
 
+
+
 class ModeSwitchingStatusConsumer(TopicConsumer):
 
     name = 'status'
@@ -369,8 +371,19 @@ class Unit(AMQPService):
         self.apps_running += 1
         if self.apps_running == self.num_insts:
             if self.config.has_key('use_ip'):
-                used_ip = self.reservation.instances[0].use_ip(self.config['use_ip'])
+                inst = self.reservation.instances[0]
+                inst.update()
+                used_ip = inst.use_ip(self.config['use_ip'])
                 print 'instance 0 of ', self.node_type, 'use ip == ', used_ip
+            if self.config.has_key('volumes'):
+                insts = self.reservation.instances
+                for inst in insts:
+                    index = int(inst.ami_launch_index)
+                    volume_id = self.config['volumes'][index]['volume_id']
+                    instance_id = inst.id
+                    device = self.config['volumes'][index]['device']
+                    self.parent.ec2.attach_volume(volume_id, instance_id, device)
+
             print 'all instances of', self.name, ' running!'
             # self.getServiceNamed('run_app_resp_consumer').stopService()
             # self.getServiceNamed('status').set_mode()
@@ -435,7 +448,6 @@ class Unit(AMQPService):
             inst_stats.append(i.public_dns_name)
             stats.append(inst_stats)
         return stats
-
 
 
 
