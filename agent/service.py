@@ -92,7 +92,7 @@ class BaseTask(object):
             return
         routing_keys = msg.routing_key.split('.')
         self.operation(msg.content.body, routing_keys)
-        self.channel.basic_ack(delivery_tag=msg.delivery_tag)
+       #  self.channel.basic_ack(delivery_tag=msg.delivery_tag)
         self.channel.deferred.addCallback(self.gotMessage)
 
     def operation(self, *args):
