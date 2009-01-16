@@ -334,6 +334,7 @@ class Unit(AMQPService):
             for i in self.reservation.instances:
                 i.update()
             if self.config.has_key('volumes'):
+                print '****Attaching Volumes for ', self.node_type
                 insts = self.reservation.instances
                 for inst in insts:
                     index = int(inst.ami_launch_index)
@@ -430,6 +431,7 @@ class Unit(AMQPService):
             self.getServiceNamed('config_templ').operation(config_templs)
         else:
             self.ready_for_run = True
+            self.getServiceNamed('status').set_mode('setInstacnceConfirmRunning')
             self.parent.setUnitReadyForRunApp(self.node_type)
 
     def startRunApp(self):
