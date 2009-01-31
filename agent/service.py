@@ -43,6 +43,7 @@ class BaseTask(object):
         """
         channel = yield client.newChannel()
         yield channel.channel_open()
+        yield channel.exchange_declare(exchange=self.exchange, type="topic")
         if self.queue:
             reply = yield channel.queue_declare(queue=self.queue)
         else:
