@@ -1,3 +1,0 @@
-git archive --format=tar --prefix=magnet/ HEAD | gzip >magnet-latest.tar.gz
-scp magnet-latest.tar.gz dev@amoeba.ucsd.edu:~/ddn/apps/
-
