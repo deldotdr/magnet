@@ -1,17 +1,45 @@
-Magnet: Management Agent
+Magnet 
 
-AMQP Clients
+AMQP messaging agents with simple configuration and minimal coding.
+ - Quickly configure messaging agents without writing boiler plate amqp
+   library code.
+ - Run multiple message consumers concurrently
 
-November 2008
 
-There are several usages of magnet.
-The mgmt module is basically a provisioning agent. service.py contains
-definitions of Twisted service having to do with provisioning a system of
-virtual machines. 
+Agents
+======
+An Agent represents an AMQP connection to a broker server. By itself, and
+Agent doesn't do much besides establish the connection; it needs one or
+more Actors to do messaging. 
 
-Amazon is currently the only cloud used for deploying virtual machines,
-interfaced using the Boto tool (wrapper of amazon aws api).
-An interface to another cloud could easily be swapped in.
+
+Actors
+======
+An Actor represents an AMQP channel within a connection. 
+An Actor must belong to an Agent in order to do anything interesting. 
+
+
+Looking at things from the Twisted Application Framework perspective,
+Agents and Actors are both services. In particular, an Agent is a
+multi-service that supervises one or more Actor services. 
+
+
+
+Provisioner
+===========
+Management service coordinating remote Agents.
+
+
+INSTALLATION
+============
+
+Dependencies
+------------
+Python
+Twisted
+txAMQP
+qpidi-1.0
+
 
 
 
