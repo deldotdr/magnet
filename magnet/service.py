@@ -17,7 +17,7 @@ from twisted.internet import reactor
 from twisted.application import service
 from twisted.application import internet
 
-from qpid.content import Content
+from txamqp.content import Content
 
 from magnet.agent.amqp import AMQPClientFactory
 
@@ -386,13 +386,14 @@ class AMQPService(service.MultiService):
     Channels can probably be dynamically created and closed.
     """
 
-    def __init__(self, config):
+    def __init__(self, host, port=5672, username='guest', password='guest',
+            spec='', vhost='/'):
         service.MultiService.__init__(self)
-        self.host = config['broker_host']
-        self.port = config['broker_port']
-        self.username = config['broker_username']
-        self.password = config['broker_password']
-        self.factory = AMQPClientFactory(config)
+        self.host = host
+        self.port = port
+        self.username = username
+        self.password = password
+        self.factory = AMQPClientFactory()
         self.factory.onConn.addCallback(self.gotClient)
 
     def startService(self):
