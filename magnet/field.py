@@ -30,11 +30,13 @@ import txamqp
 from txamqp.protocol import AMQClient, TwistedDelegate
 
 from magnet.pole import IPoleService
+from magnet import particle
 
 class AMQPClientConnectorService(service.MultiService):
     """Field-Service connector.
     The AMQP protocol takes a little more configuration to get going than
-    other protocols; This special connector is used to help keep the pole
+    other protocols (or I need to understand the frame work better,
+    probably); This special connector is used to help keep the pole
     service from having to know anything about the connection.
     """
 
@@ -45,16 +47,20 @@ class AMQPClientConnectorService(service.MultiService):
         self.amqpclient.service.setServiceParent(self)
         self.name = name
 
-    def connect(self, host='localhost', port=5672, username='guest', password='guest', vhost='/', spec=None):
+    def connect(self, host='localhost', port=5672, username='guest', password='guest', vhost='/', spec_path='.'):
         d = defer.Deferred()
         delegate = TwistedDelegate()
         d.addCallback(self.amqpclient.gotClient, username, password)
         self.host = host
         self.port = port
+        spec = self._spec(spec_path)
         self.f = protocol._InstanceFactory(self.reactor,
-                self.amqpclient.makeConnection(delegate, vhost, spec), 
+                self.amqpclient.newConnection(delegate, vhost, spec), 
                 d)
         return d
+
+    def _spec(self, spec_path):
+        return txamqp.spec.load(spec_path)
 
     def startService(self):
         service.MultiService.startService(self)
@@ -62,7 +68,6 @@ class AMQPClientConnectorService(service.MultiService):
 
     def stopService(self):
         self.connector.disconnect()
-
 
     @defer.inlineCallbacks
     def gotClient(self, client, username, password):
@@ -85,9 +90,14 @@ class IAMQPClient(Interface):
     def sendMessage(msg, key):
         pass
 
-    def makeConnection(delegate, vhost, spec):
+    def newConnection(delegate, vhost, spec):
         pass
 
+    def connection_ready(connection):
+        """When login to broker succeeds, client creator calls this and
+        passes client connection 
+        """
+        pass
 
 class AMQPClientFromPoleService(object):
     """This adapter interfaces a pole service to the AMQP protocol.
@@ -105,7 +115,9 @@ class AMQPClientFromPoleService(object):
         self.routing_pattern = service.system_name + '.' \
                                 + service.service_name
 
-    def makeConnection(self, delegate, vhost, spec):
+    def newConnection(self, delegate, vhost, spec):
+        """This isn't the right name...
+        """
         return AMQClient(delegate, vhost, spec)
 
     @defer.inlineCallbacks
@@ -120,7 +132,6 @@ class AMQPClientFromPoleService(object):
         yield self.startDirectConsumer()
         yield self.startTopicConsumer()
         yield self.startProducer()
-        self.sendMessage('hi', 'tester')
 
     @defer.inlineCallbacks
     def startDirectConsumer(self):
@@ -169,7 +180,7 @@ class AMQPClientFromPoleService(object):
         self.send_channel = channel
 
     def sendMessage(self, message_object, routing_key):
-        serialized_message = particle.prepate_to_launch(message_object)
+        serialized_message = particle.prepare_to_launch(message_object)
         content = txamqp.content.Content(serialized_message)
         self.send_channel.basic_publish(exchange=self.exchange, 
                                         routing_key=routing_key,
@@ -191,7 +202,135 @@ class AMQPClientFromPoleService(object):
 
         queue.get().addCallback(self.handleMessage, channel, channel_num, queue)
 
-components.registerAdapter(AMQPClientFromAgentService, 
+components.registerAdapter(AMQPClientFromPoleService, 
                             IPoleService,
                             IAMQPClient)
+
+
+
+class IMultiConsumerClient(Interface):
+    """Implementing this expresses the intention of using multiple
+    consumers within one connection.
+    """
+
+    def newClient(delegate, vhost, spec):
+        """
+        The connector/protocol/transport related class uses this
+        """
+        pass
+
+    def connectionReady(connection):
+        """When login to broker succeeds, client creator calls this and
+        passes client connection 
+
+        The connector/protocol calls this
+        """
+        pass
+
+    def createConsumer(key, handler, *args, **kw):
+        """
+        General method for creating a consumer listening on a particular
+        key
+
+        The caller needs to provide a callback function to handle messages
+        when they are received.
+        
+        The Pole service uses this
+        """
+        pass
+
+    def destroyConsumer(key):
+        """
+
+        The Pole service uses this
+        """
+        pass
+
+    def createProducer(key, *args, **kw):
+        """
+        General method for creating a producer sending messages on a
+        particular key
+
+        The Pole service uses this
+        """
+        pass
+
+    def messageReceived(message_object):
+        """used to be handleMessage
+        decide where the message should go, and pass it on
+
+        Consumers created through create_consumer will provide their own
+        handler, this probably shouldn't be used for MultiPoles unless they
+        set up actions that aren't held by a role.
+
+        The protocol calls this
+        """
+        pass
+
+    def sendMessage(msg, key):
+        """
+
+        The Pole service uses this
+        """
+        pass
+
+
+class AMQPClientFromMultiPoleService(object):
+
+    implements(IMultiConsumerClient)
+
+    client = AMQClient
+
+    def __init__(self, service):
+        self.service = service
+        self.consumers = {}
+
+    def newClient(self, delegate, vhost, spec):
+        c = self.client(delegate, vhost, spec)
+        return c
+
+    def connectionReady(self, connection):
+        self.connection = connection
+
+    @defer.inlineCallbacks
+    def createConsumer(self, key, handler, *args, **kw):
+        """key should be unique for each consumer created. This is
+        enforceable via the MultiService constraint of unique names for
+        it's child services
+        """
+        channel = yield self.connection.channel(key)
+        yield channel.channel_open()
+        yield channel.exchange_declare(exchange=self.exchange, type="topic", auto_delete=True)
+        yield channel.queue_declare(queue=self.service.token, auto_delete=True)
+        yield channel.queue_bind(queue=self.service.token, routing_key=key)
+
+        consumer_tag = str(uuid.uuid4())
+        yield channel.basic_consume(queue=self.service.token, consumer_tag=consumer_tag)
+        consumer_queue = yield self.connection.queue(consumer_tag)
+        consumer_queue.get().addCallback(handler, channel, consumer_queue)
+
+
+    def messageReceived(self, message_object):
+        """
+        Consumers created through create_consumer will provide their own
+        handler, this probably shouldn't be used for MultiPoles unless they
+        set up actions that aren't held by a role.
+        """
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

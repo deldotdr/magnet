@@ -36,14 +36,36 @@ from twisted.internet.utils import getProcessOutput
 
 class IPoleService(Interface):
     """
-    Perhaps IAgentService, or IActorService
+     IAgentService, or IActorService
 
-    This interface defines how a twisted application service that does
-    a named function invoked though a handleMessage method.
+    Interface between Application service, and message delivery protocol.
+     
     """
 
     def handleMessage(msg):
         """
+        """
+        pass
+
+class IMultiPoleService(Interface):
+    """MultiPole means the exploiting the multiplexing of the connection.
+    The MultiPole is a collection of Roles, each Role listens on it's own
+    consumer
+    """
+
+    def handleMessage(msg):
+        """
+        """
+        pass
+
+    def getRoles():
+        """
+        """
+        pass
+
+    def addRole(role):
+        """
+        set service parent
         """
         pass
 
@@ -91,15 +113,17 @@ class BasePole(service.Service):
         return iter(self.actions)
 
     def handleMessage(self, message_object):
-        method = getattr(self, 'action_%s' % message_object['method'])
+        try:
+            method = getattr(self, 'action_%s' % message_object['method'])
+        except AttributeError:
+            "Received unknown Action"
+            return None
         res = method(message_object)
         return res
 
-    def putAction(self, topic, action):
-        """a way to add an action service consuming or producing on its own channel
-        within an agent
+    def addRole(self, role):
+        """A Role is a class with more actions.
         """
-        pass
 
     def sendMessage(self, message_object, key):
         self.parent.sendMessage(message_object, key)
@@ -120,16 +144,94 @@ class MultiPole(BasePole):
     """
     pass
 
+class MonoPoleSingleRole:
+    """One consumer, one set of actions
+    The pole also holds a producer channel for sending messages.
 
-class MagnitePole(BasePole):
-    """This Pole should be compatible with a Nanite Agent.
-    Nanite Agents poses Actions. 
+    Messages produced can have any routing key, and will be published to
+    the same exchange as the consumers (this might be an arbitrary
+    constraint).
+    """
+    pass
 
+class MonoPoleMultiRole:
+    """One consumer, multiple sets of actions (multiple roles). Role
+    specified in message, not in routing/binding key
+    """
+    pass
+
+class MultiPoleMultiRole(service.MultiService):
+    """Each Role has it's own consumer
+    When a role is registered, the Pole knows to configure a consumer for
+    it. 
+    Multiple consumers means multiple channels within one connection.
+    Consumers and channels should map 1:1; don't use a channel for more
+    than one consumer.
+
+    When benchmarking, the characteristics of connection multiplexing
+    should be assessed.
     """
 
 
+    def __init__(self, exchange, system_name, service_name, token=None):
+        """
+        exchange is the real name of the exchange that should be used for
+        now.
+
+        system_name: what system is this agent representing (system is like
+        an ever present unit
+
+        service_name: the name of this service (i.e. control, monitor, ...)
+
+        token: if supplied, should be a unique id within the realm of the
+        system
+
+        routing/resource naming:
+            system.service.selector[.method]
+            /system/service/selector[/method]
+
+            (selector could be a token, *, etc...)
+        """
+        service.MultiService.__init__(self)
+        self.exchange = exchange
+        self.system_name = system_name
+        self.service_name = service_name
+        if token is None:
+            token = uuid.uuid4().hex
+        self.token = token
+        self.actions = []
+        for m in self.__dict__.keys():
+            if m.startswith('action_'):
+                self.actions.append(m)
 
 
+    def startService(self):
+        service.MultiService.startService(self)
+
+
+
+
+
+class Role(service.Service):
+    """Container of actions particular one thing.
+    
+    Ex: Controlling an OS application process.
+
+    """
+
+    def __init__(self, name):
+        self.name = name
+
+
+    def startService(self):
+        """
+        Get a consumer
+        """
+        service.Service.startService(self)
+
+    def handleMessage(self, msg):
+        """
+        """
 
 
 
