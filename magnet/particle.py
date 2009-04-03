@@ -10,11 +10,11 @@ import simplejson as json
 
 
 
-def prepare_to_launch(message_object, serializer='json'):
+def serialize_application_message(message_object, serializer='json'):
     serialized_message_object = json.dumps(message_object)
     return serialized_message_object
 
-def splash_down(serialized_message_object, unserializer='json'):
+def unserialize_application_message(serialized_message_object, unserializer='json'):
     message_object = json.loads(serialized_message_object)
     return message_object
 

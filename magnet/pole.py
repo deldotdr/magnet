@@ -24,19 +24,20 @@ formats using many variations of key:value pairs, etc...
 
 """
 
+import uuid
 
 from zope.interface import Interface, implements
 
+from twisted.plugin import IPlugin
 from twisted.internet import defer
 from twisted.application import service
 
 from twisted.internet.utils import getProcessOutput
 
 
-
 class IPoleService(Interface):
     """
-     IAgentService, or IActorService
+     Could also be named IAgentService, or IActorService
 
     Interface between Application service, and message delivery protocol.
      
@@ -74,9 +75,9 @@ class BasePole(service.Service):
     """This might be called BaseAgent or BaseActor
     """
 
-    implements(IPoleService)
+    implements(IPlugin, IPoleService)
 
-    def __init__(self, exchange, system_name, service_name, token=None):
+    def __init__(self, exchange='magnet', routing_pattern='test', system_name='test', service_name='test', token=None):
         """
         exchange is the real name of the exchange that should be used for
         now.
@@ -97,6 +98,7 @@ class BasePole(service.Service):
         """
 
         self.exchange = exchange
+        self.routing_pattern = routing_pattern
         self.system_name = system_name
         self.service_name = service_name
         if token is None:
@@ -118,7 +120,7 @@ class BasePole(service.Service):
         except AttributeError:
             "Received unknown Action"
             return None
-        res = method(message_object)
+        res = defer.maybeDeferred(method, message_object)
         return res
 
     def addRole(self, role):
@@ -133,6 +135,20 @@ class BasePole(service.Service):
 
     def stopService(self):
         service.Service.stopService(self)
+
+    def do_when_running(self):
+        pass
+
+class SendOne(BasePole):
+
+    def send_when_running(self, routing_key, command, payload):
+        self.send_routing_key = routing_key
+        self.send_command = command
+        self.send_payload = payload
+
+    def do_when_running(self):
+        message_object = {'method':self.send_command, 'payload':self.send_payload}
+        self.sendMessage(message_object, self.send_routing_key)
 
 
 class MultiPole(BasePole):
@@ -171,6 +187,8 @@ class MultiPoleMultiRole(service.MultiService):
     When benchmarking, the characteristics of connection multiplexing
     should be assessed.
     """
+
+    implements(IPlugin, IMultiPoleService)
 
 
     def __init__(self, exchange, system_name, service_name, token=None):

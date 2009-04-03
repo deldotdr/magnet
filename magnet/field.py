@@ -26,18 +26,17 @@ from twisted.internet import reactor
 from twisted.internet import protocol
 from twisted.application import service
 
-import txamqp
+from txamqp import spec
+from txamqp import content
 from txamqp.protocol import AMQClient, TwistedDelegate
 
-from magnet.pole import IPoleService
+from magnet import pole
 from magnet import particle
 
 class AMQPClientConnectorService(service.MultiService):
-    """Field-Service connector.
-    The AMQP protocol takes a little more configuration to get going than
-    other protocols (or I need to understand the frame work better,
-    probably); This special connector is used to help keep the pole
-    service from having to know anything about the connection.
+    """Field Service Connector.
+    This connector is used to keep the pole service 
+    from having to know anything about the transport connection.
     """
 
     def __init__(self, reactor, amqpclient, name='magnet'):
@@ -60,7 +59,7 @@ class AMQPClientConnectorService(service.MultiService):
         return d
 
     def _spec(self, spec_path):
-        return txamqp.spec.load(spec_path)
+        return spec.load(spec_path)
 
     def startService(self):
         service.MultiService.startService(self)
@@ -112,8 +111,9 @@ class AMQPClientFromPoleService(object):
         self.direct_routing_key = service.system_name + '.' \
                                 + service.service_name + '.' \
                                 + service.token
-        self.routing_pattern = service.system_name + '.' \
+        self.Xrouting_pattern = service.system_name + '.' \
                                 + service.service_name
+        self.routing_pattern = service.routing_pattern
 
     def newConnection(self, delegate, vhost, spec):
         """This isn't the right name...
@@ -129,9 +129,10 @@ class AMQPClientFromPoleService(object):
         yield channel.channel_open()
         yield channel.exchange_declare(exchange=self.exchange, type="topic")
         yield channel.channel_close(reply_code=200, reply_text="Ok")
-        yield self.startDirectConsumer()
+        # yield self.startDirectConsumer()
         yield self.startTopicConsumer()
         yield self.startProducer()
+        self.service.do_when_running()
 
     @defer.inlineCallbacks
     def startDirectConsumer(self):
@@ -180,19 +181,20 @@ class AMQPClientFromPoleService(object):
         self.send_channel = channel
 
     def sendMessage(self, message_object, routing_key):
-        serialized_message = particle.prepare_to_launch(message_object)
-        content = txamqp.content.Content(serialized_message)
+        serialized_message = particle.serialize_application_message(message_object)
+        mess_content = content.Content(serialized_message)
         self.send_channel.basic_publish(exchange=self.exchange, 
                                         routing_key=routing_key,
-                                        content=content)
+                                        content=mess_content)
 
+    @defer.inlineCallbacks
     def handleMessage(self, amqp_message, channel, channel_num, queue):
         """
         Use particle for message serialization/de-serialization.
         """
-        message_object = particle.splash_down(amqp_message.content.body)
+        message_object = particle.unserialize_application_message(amqp_message.content.body)
 
-        response_message = self.service.handleMessage(message_object)
+        response_message = yield self.service.handleMessage(message_object)
 
         # Ack when handleMessage succeeds
         channel.basic_ack(delivery_tag=amqp_message.delivery_tag)
@@ -203,9 +205,8 @@ class AMQPClientFromPoleService(object):
         queue.get().addCallback(self.handleMessage, channel, channel_num, queue)
 
 components.registerAdapter(AMQPClientFromPoleService, 
-                            IPoleService,
+                            pole.IPoleService,
                             IAMQPClient)
-
 
 
 class IMultiConsumerClient(Interface):

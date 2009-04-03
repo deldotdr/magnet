@@ -1,0 +1,2 @@
+include twisted/plugins/magnet_plugin.py
+include magnet/spec/*

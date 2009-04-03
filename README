@@ -1,33 +1,72 @@
+======
 Magnet 
-
-AMQP messaging agents with simple configuration and minimal coding.
- - Quickly configure messaging agents without writing boiler plate amqp
-   library code.
- - Run multiple message consumers concurrently
-
-
-Agents
 ======
-An Agent represents an AMQP connection to a broker server. By itself, and
-Agent doesn't do much besides establish the connection; it needs one or
-more Actors to do messaging. 
+April 2, 2009
 
-
-Actors
-======
-An Actor represents an AMQP channel within a connection. 
-An Actor must belong to an Agent in order to do anything interesting. 
-
-
-Looking at things from the Twisted Application Framework perspective,
-Agents and Actors are both services. In particular, an Agent is a
-multi-service that supervises one or more Actor services. 
+Interacting message agents.
 
 
 
-Provisioner
-===========
-Management service coordinating remote Agents.
+Pole - Application messages
+---------------------------
+Poles are Twisted services that know how to handle messages passed carried
+within the Transport Protocols content payload. 
+
+Poles realize the intent/purpose/request carried within the Application
+message.
+
+A Pole is a collection of methods/functions that execute specific actions.
+Actions can be anything. 
+
+
+Field - Transport messages
+--------------------------
+Magnet supports AMQP version 0-8.
+
+The AMQP specification defines several exchange types and a range of
+message queue configuration options. 
+
+
+Particle - Message format and serialization
+-------------------------------------------
+
+
+Usage
+=====
+Magnet can be used as a twistd plugin:
+
+$ twistd magnet --help
+Usage: twistd [options] magnet [options]
+Options:
+  -h, --host=       Broker Host [default: localhost]
+      --port=       Broker Port [default: 5672]
+  -u, --username=   Broker username [default: guest]
+  -p, --password=   Broker password [default: guest]
+      --vhost=      Broker vhost [default: /]
+      --spec_path=  Path to AMQP spec file [default:]
+      --version     
+      --help        Display this help and exit.
+      --plugins     
+
+Create a simple actor (look for this in the examples dir).
+cd into the examples dir (you should see a dir called twisted).
+Run the say actor by doing:
+twistd -n magnet 
+
+Magnet will automatically find say with in twisted/plugins/say_agent.py
+
+Simple Producer
+---------------
+
+twistd -n magnet send -c say -r test --payload='ohi, wrld'
+
+
+Notes:
+------
+Message factories. 
+Given a message protocol/format/..., create instances of message handlers
+or create a parameterized message object ready for placement into the
+transport message body/content.
 
 
 INSTALLATION
@@ -35,10 +74,15 @@ INSTALLATION
 
 Dependencies
 ------------
-Python
-Twisted
-txAMQP
+Python - http://python.org  (Comes with in OSX and Linux)
+Twisted - http://twistedmatrix.com/trac/ (Comes with OSX)
+txAMQP - https://launchpad.net/txamqp/+download
 
+AMQP Broker
+-----------
+RabbitMQ is the only tested and supported broker (spec version amqp0-8).
+
+http://www.rabbitmq.com/download.html
 
 
 
