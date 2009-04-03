@@ -78,7 +78,7 @@ class StatePole(pole.BasePole):
         """
 
     def start_phase(self, phase):
-        p = getattr(self, 'phase_%s', % str(phase))
+        p = getattr(self, 'phase_%s' % str(phase))
         p()
 
     def request_configuration(self):
