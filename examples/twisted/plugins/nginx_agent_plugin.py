@@ -38,4 +38,4 @@ class NginxControl(pole.BasePole):
         d = getProcessOutput('sudo /etc/init.d/nginx', args=('reload',))
         return d
 
-nginxcontrol = NginxControl('magnet', 'test', 'test', token='nginx')
+# nginxcontrol = NginxControl('magnet', 'test', 'test', token='nginx')
