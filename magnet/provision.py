@@ -38,7 +38,7 @@ class StatePole(pole.BasePole):
     asking for what it needs, etc.
     The second action in the pair waits to receive an reply from the
     scheduler. A periodic monitor supervises the Poles Phase changes and
-    makes sure it doesn't get stuck in a bad Phase. 
+    makes sure it doesn't get stuck in a bad Phase.
     If the scheduler isn't prepared to send the Pole what it needs, it will
     respond telling it to wait for more messages in that Phase.
 
@@ -104,8 +104,8 @@ class StatePole(pole.BasePole):
 
     def start_application(self, message_object):
         """a trigger function to start an application. The pole should
-        already know how to do this. 
-        
+        already know how to do this.
+
         Check that the state of the other phases satisfies the requirements
         for this phase to start.
 
@@ -119,19 +119,10 @@ class StatePole(pole.BasePole):
     def test_application(self, message_object):
         """run test of application availability/functionality.
         This can only be run if the phase is 'application running'
-        return 
+        return
             - application not running (wrong phase, not necessarily an
               error)
             - test success
             - test fail, reason, report
 
         """
-
-
-
-
-
-
-
-
-
