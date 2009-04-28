@@ -24,4 +24,4 @@ class Talker(pole.SendOne):
 
 # Instantiate object, invoke
 talker = Talker()
-talker.doSend('')
+talker.doSend('hello, world!')

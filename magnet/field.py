@@ -169,7 +169,7 @@ class AMQPClientFromPoleService(object):
         yield channel.basic_consume(queue=reply.queue, consumer_tag=consumer_tag)
         chQueue = yield self.client.queue(consumer_tag)
         chQueue.get().addCallback(self.handleMessage, channel, channel_num, chQueue)
-        print 'topic consumer done'
+#        print 'topic consumer done'
         self.channels.append(channel)
 
     @defer.inlineCallbacks

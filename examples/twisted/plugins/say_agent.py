@@ -20,7 +20,7 @@ class Say(pole.BasePole):
         self.sendMessage(reply, 'test')
 
     def sendError(self, failure):
-        reply = {'method': 'reply', 'payload': 'got an error'}
+        reply = {'method': 'reply', 'payload': 'got an error running say'}
         self.sendMessage(reply, 'test')
 
     def action_say(self, message_object):
