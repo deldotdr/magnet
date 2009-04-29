@@ -16,12 +16,12 @@ class Talker(pole.SendOne):
                         format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
         logging.info('Sending say message')
         self.send_when_running('test', 'say', msgString)
-        c = field.IAMQPClient(talker)
-        connector = field.AMQPClientConnectorService(reactor, c)
-        connector.connect(host='amoeba.ucsd.edu', spec_path='magnet/spec/amqp0-8.xml')
-        connector.startService()
-        reactor.run()
 
 # Instantiate object, invoke
 talker = Talker()
 talker.doSend('hello, world!')
+c = field.IAMQPClient(talker)
+connector = field.AMQPClientConnectorService(reactor, c)
+connector.connect(host='amoeba.ucsd.edu', spec_path='magnet/spec/amqp0-8.xml')
+connector.startService()
+reactor.run()
