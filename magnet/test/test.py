@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Start of a Trial-based unit test suite for Magnet."""
+"""Start of a Trial-based unit test suite for Magnet. Much hardwiring and hackery."""
 
 __author__='hubbard'
 __date__ ='$Apr 27, 2009 10:15:30 AM$'
@@ -31,21 +31,15 @@ class NIBConnectorTest(unittest.TestCase):
         self.connector.startService()
         dd = yield d
 
-        # Set a five-second timeout for login failures and similar
-        self.timeout = 5
-
+        # Set a timeout for login failures and similar
+        self.timeout = 10
 
     @inlineCallbacks
     def tearDown(self):
         yield self.connector.stopService()
 
-    # Tests!
-    @inlineCallbacks
-    def test_connect(self):
-        # yield self.nibc.connect()
-        yield nibc.connect()
-
     @inlineCallbacks
     def test_snd_rcv(self):
-        yield nibc.connect()
         yield nibc.pingPong()
+        assert nibc.got_ack == True
+        assert nibc.got_err == False
