@@ -33,14 +33,63 @@ from txamqp.protocol import AMQClient, TwistedDelegate
 from magnet import pole
 from magnet import particle
 
-class AMQPClientConnectorService(service.MultiService):
+class AMQPConnector(service.Service):
+    """Field Service Connector.
+    This connector is used to keep the pole service 
+    from having to know anything about the transport connection.
+    
+    This special connector is needed to login to the broker (normally
+    TCPClient would be used).
+    """
+
+    def __init__(self, host='localhost', port=5672, 
+                        username='guest', password='guest', 
+                        vhost='/', spec_path='.',
+                        amqpadapter=None):
+        self.host = host
+        self.port = port
+        self.username = username
+        self.password = password
+        self.vhost = vhost
+        self.spec = self._spec(spec_path)
+        self.amqpadapter = amqpadapter
+
+    def _connect(self):
+        d = defer.Deferred()
+        delegate = TwistedDelegate()
+        d.addCallback(self.gotConnection)
+        f = protocol._InstanceFactory(reactor,
+                self.amqpadapter.newConnection(delegate, self.vhost, self.spec), 
+                d)
+        return reactor.connectTCP(self.host, self.port, f)
+
+    def _spec(self, spec_path):
+        return spec.load(spec_path)
+
+    def startService(self):
+        service.Service.startService(self)
+        self.connection = self._connect()
+
+    def stopService(self):
+        self.connection.disconnect()
+
+    @defer.inlineCallbacks
+    def gotConnection(self, client):
+        """General handler for the brokers initial response.
+        This might be the place to handle a redirect when connecting to a
+        broker cluster
+        """
+        yield client.start({"LOGIN":self.username, "PASSWORD":self.password})
+        self.amqpadapter.client = client
+
+
+class AMQPClientConnectorService(service.Service):
     """Field Service Connector.
     This connector is used to keep the pole service 
     from having to know anything about the transport connection.
     """
 
     def __init__(self, reactor, amqpclient, name='magnet'):
-        service.MultiService.__init__(self)
         self.reactor = reactor
         self.amqpclient = amqpclient
         self.amqpclient.service.setServiceParent(self)
@@ -62,7 +111,7 @@ class AMQPClientConnectorService(service.MultiService):
         return spec.load(spec_path)
 
     def startService(self):
-        service.MultiService.startService(self)
+        service.Service.startService(self)
         self.connector = self.reactor.connectTCP(self.host, self.port, self.f)
 
     def stopService(self):
@@ -75,6 +124,13 @@ class AMQPClientConnectorService(service.MultiService):
 
     def sendMessage(self, msg, key):
         self.amqpclient.sendMessage(msg, key)
+
+
+class IAMQPClientFactory(Interface):
+    """
+    """
+
+
 
 class IAMQPClient(Interface):
     """This defines how the Connector Service should interface
@@ -103,6 +159,7 @@ class AMQPClientFromPoleService(object):
     """
 
     implements(IAMQPClient)
+    connection_class = AMQClient
 
     def __init__(self, service):
         self.service = service
