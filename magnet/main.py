@@ -4,8 +4,8 @@ import sys
 from zope.interface import implements
 
 from twisted.python import usage
-from twisted.plugin import IPlugin 
-from twisted.plugin import getPlugins 
+from twisted.plugin import IPlugin
+from twisted.plugin import getPlugins
 from twisted.application.service import IServiceMaker
 from twisted.internet import reactor
 
@@ -14,9 +14,11 @@ from magnet import pole
 
 
 import magnet
+# Spec file is loaded from the egg bundle
 spec_path_def = os.path.join(magnet.__path__[0], 'spec', 'amqp0-8.xml')
 
 class SendMessageSubCommand(usage.Options):
+    """Used by MagnetServiceMaker, below. E.g. sendOne uses 'send'."""
     optParameters = [
             ['exchange', 'e', 'magnet', 'Exchange name (topic)'],
             ['routing_key', 'r', 'test'],
@@ -52,7 +54,7 @@ class MagnetPluginServiceMaker(object):
     options = Options
 
     def __init__(self, pole):
-        """Initialize with a single pole 
+        """Initialize with a single pole
         """
         self.pole = pole
 
@@ -97,17 +99,3 @@ class MagnetServiceMaker(object):
                             vhost=options['vhost'],
                             spec_path=options['spec_path'])
         return connector
-
-
-
-
-
-
-
-
-
-
-
-
-
-

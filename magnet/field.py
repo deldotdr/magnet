@@ -2,7 +2,7 @@
 Field has to do with network connections.
 
 The primary prtocol is AMQP. Here, the AMQP client adapter, called
-AMQPClientFromAgentService, adapts a pole.py service. 
+AMQPClientFromAgentService, adapts a pole.py service.
 
 It is possible to create other adapters for poles. An http (web or XML-RPC)
 protocol could be used instead of AMQP.
@@ -85,7 +85,7 @@ class AMQPConnector(service.Service):
 
 class AMQPClientConnectorService(service.Service):
     """Field Service Connector.
-    This connector is used to keep the pole service 
+    This connector is used to keep the pole service
     from having to know anything about the transport connection.
     """
 
@@ -103,7 +103,7 @@ class AMQPClientConnectorService(service.Service):
         self.port = port
         spec = self._spec(spec_path)
         self.f = protocol._InstanceFactory(self.reactor,
-                self.amqpclient.newConnection(delegate, vhost, spec), 
+                self.amqpclient.newConnection(delegate, vhost, spec),
                 d)
         return d
 
@@ -150,7 +150,7 @@ class IAMQPClient(Interface):
 
     def connection_ready(connection):
         """When login to broker succeeds, client creator calls this and
-        passes client connection 
+        passes client connection
         """
         pass
 
@@ -226,7 +226,7 @@ class AMQPClientFromPoleService(object):
         yield channel.basic_consume(queue=reply.queue, consumer_tag=consumer_tag)
         chQueue = yield self.client.queue(consumer_tag)
         chQueue.get().addCallback(self.handleMessage, channel, channel_num, chQueue)
-        print 'topic consumer done'
+#        print 'topic consumer done'
         self.channels.append(channel)
 
     @defer.inlineCallbacks
@@ -240,7 +240,7 @@ class AMQPClientFromPoleService(object):
     def sendMessage(self, message_object, routing_key):
         serialized_message = particle.serialize_application_message(message_object)
         mess_content = content.Content(serialized_message)
-        self.send_channel.basic_publish(exchange=self.exchange, 
+        self.send_channel.basic_publish(exchange=self.exchange,
                                         routing_key=routing_key,
                                         content=mess_content)
 
@@ -261,7 +261,7 @@ class AMQPClientFromPoleService(object):
 
         queue.get().addCallback(self.handleMessage, channel, channel_num, queue)
 
-components.registerAdapter(AMQPClientFromPoleService, 
+components.registerAdapter(AMQPClientFromPoleService,
                             pole.IPoleService,
                             IAMQPClient)
 
@@ -279,7 +279,7 @@ class IMultiConsumerClient(Interface):
 
     def connectionReady(connection):
         """When login to broker succeeds, client creator calls this and
-        passes client connection 
+        passes client connection
 
         The connector/protocol calls this
         """
@@ -292,7 +292,7 @@ class IMultiConsumerClient(Interface):
 
         The caller needs to provide a callback function to handle messages
         when they are received.
-        
+
         The Pole service uses this
         """
         pass
@@ -374,21 +374,3 @@ class AMQPClientFromMultiPoleService(object):
         handler, this probably shouldn't be used for MultiPoles unless they
         set up actions that aren't held by a role.
         """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
