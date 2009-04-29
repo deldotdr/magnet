@@ -83,13 +83,14 @@ class AMQPConnector(service.Service):
         self.amqpadapter.client = client
 
 
-class AMQPClientConnectorService(service.Service):
+class AMQPClientConnectorService(service.MultiService):
     """Field Service Connector.
     This connector is used to keep the pole service
     from having to know anything about the transport connection.
     """
 
     def __init__(self, reactor, amqpclient, name='magnet'):
+        service.MultiService.__init__(self)
         self.reactor = reactor
         self.amqpclient = amqpclient
         self.amqpclient.service.setServiceParent(self)
@@ -111,7 +112,8 @@ class AMQPClientConnectorService(service.Service):
         return spec.load(spec_path)
 
     def startService(self):
-        service.Service.startService(self)
+        # service.Service.startService(self)
+        service.MultiService.startService(self)
         self.connector = self.reactor.connectTCP(self.host, self.port, self.f)
 
     @defer.inlineCallbacks
