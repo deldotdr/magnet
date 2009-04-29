@@ -65,8 +65,9 @@ class AMQPClientConnectorService(service.MultiService):
         service.MultiService.startService(self)
         self.connector = self.reactor.connectTCP(self.host, self.port, self.f)
 
+    @defer.inlineCallbacks
     def stopService(self):
-        self.connector.disconnect()
+        yield self.connector.disconnect()
 
     @defer.inlineCallbacks
     def gotClient(self, client, username, password):
