@@ -53,10 +53,8 @@ class NIBConnector(pole.BasePole):
         """TODO: Implement me!"""
         return
 
-    @inlineCallbacks
     def connect(self):
-        pass
+        return None
 
-    @inlineCallbacks
     def pingPong(self):
-        yield self.talker.doSend('hi world')
+        self.doSend('hi world')
