@@ -14,7 +14,7 @@ from twisted.internet import protocol, reactor
 import logging
 
 class NIBConnectorTest(unittest.TestCase):
-#    @inlineCallbacks
+    @inlineCallbacks
     def setUp(self):
         logging.basicConfig(level=logging.DEBUG, \
                 format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
@@ -23,16 +23,14 @@ class NIBConnectorTest(unittest.TestCase):
         c = field.IAMQPClient(self.nibc)
         self.connector = field.AMQPClientConnectorService(reactor, c)
         logging.info('connecting')
-        d = self.connector.connect(host='amoeba.ucsd.edu', spec_path='/Users/hubbard/code/basicAmqp/amqp0-8.xml')
-        d.addCallback(self.connector.startService)
-#        logging.info('starting service')
-#        self.connector.startService()
+        yield self.connector.connect(host='amoeba.ucsd.edu', spec_path='/Users/hubbard/code/basicAmqp/amqp0-8.xml')
+        logging.info('starting service')
+        self.connector.startService()
 
         # Set a five-second timeout for login failures and similar
         self.timeout = 5
 
         logging.info('Setup complete')
-        return d
 
     @inlineCallbacks
     def tearDown(self):
