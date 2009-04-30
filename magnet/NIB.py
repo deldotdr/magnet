@@ -3,9 +3,6 @@
 __author__='hubbard'
 __date__ ='$Apr 27, 2009 10:15:30 AM$'
 
-"""
-NIB is a type of magnet (http://en.wikipedia.org/wiki/Neodymium_magnet) and NIB.py
-is the pair class file for test.py, providing scaffolding that the test uses."""
 
 from twisted.internet.defer import inlineCallbacks, Deferred
 from twisted.internet import protocol, reactor, threads
@@ -20,16 +17,21 @@ class MyError(Exception):
     def __str__(self):
         return repr(self.value)
 
-class NIBConnector(pole.BasePole):
+class NIB(pole.BasePole):
+    """NIB is a type of magnet (http://en.wikipedia.org/wiki/Neodymium_magnet) and NIB.py
+       is the pair class file for test.py, providing scaffolding that the test uses.
+
+       See pingPong method.
+       """
 
     def action_reply(self, message_object):
-        """Triggered by replies to say"""
+        """Triggered by replies to say, via Magnet"""
         logging.info('Got reply message: %s' % message_object['payload'])
         self.got_ack = True
         return None
 
     def action_say(self, message_object):
-        """Triggered by say messages"""
+        """Triggered by say messages, via Magnet"""
         to_say = message_object['payload']
         logging.debug('Got say message: %s' % message_object['payload'])
         d = getProcessOutput('/usr/bin/say', ['-v', 'pipe organ', to_say])
@@ -51,7 +53,7 @@ class NIBConnector(pole.BasePole):
 
 
     def doSend(self, msgString):
-        """Sends a say message into the exchange"""
+        """Sends a say message into the exchange, initiates the handshake."""
         self.got_ack = False
         self.got_err = False
         smsg = {'method': 'say', 'payload': msgString}
@@ -72,9 +74,10 @@ class NIBConnector(pole.BasePole):
         else:
             raise MyError('timeout')
 
-    def laterCall(self):
-        print 'later called'
-
-    def pingPong(self):
-        self.doSend('hi world')
+    def pingPong(self, msg='hi world'):
+        """Does a send/speak/ack loop, via callbacks. Messages are sent and received,
+        pretty decent communications test."""
+        # Kick off the initial say command
+        self.doSend(msg)
+        # Return a deferred that's a threaded function waiting for it all to finish.
         return threads.deferToThread(self.waitForPingPong)
