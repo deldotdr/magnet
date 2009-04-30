@@ -46,11 +46,11 @@ class NIBTest(unittest.TestCase):
         self.connector.startService()
         dd = yield d
 
-    #@inlineCallbacks
-    #def test_bad_address(self):
-    #    d = NibHelper(hostname='invalid.example')
-    #    yield d
-
+    @inlineCallbacks
+    def test_bad_address(self):
+        yield self.go(hostName='bad.example')
+        assert self.nib.got_err == True
+        
     @inlineCallbacks
     def test_snd_rcv(self):
         yield self.go(hostName='amoeba.ucsd.edu')
