@@ -32,7 +32,6 @@ class NIBTest(unittest.TestCase):
         except:
             pass
 
- #   @inlineCallbacks
     def go(self, hostName='amoeba.ucsd.edu'):
         # Create the instance
         self.nib = NIB()
@@ -44,7 +43,6 @@ class NIBTest(unittest.TestCase):
         d = self.connector.connect(host=hostName, spec_path=spec_path_def)
         # startService is where connectTCP actually gets called
         self.connector.startService()
-#        dd = yield d
         return d
 
     @inlineCallbacks
