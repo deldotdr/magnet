@@ -18,8 +18,9 @@ Convert between frames and higher-level AMQP methods
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 
-from Queue import Empty, Queue
 from struct import pack, unpack
+from twisted.internet import defer
+from twisted.python import log
 
 try:
     from collections import defaultdict
@@ -91,6 +92,9 @@ class _PartialMessage(object):
             self.msg.body = ''.join(self.body_parts)
             self.complete = True
 
+def buffer_iterator(buf):
+    while 1:
+        yield buf.get()
 
 class MethodReader(object):
     """
@@ -114,36 +118,26 @@ class MethodReader(object):
         self.partial_messages = {}
         # For each channel, which type is expected next
         self.expected_types = defaultdict(lambda:1)
+        self.q_it = buffer_iterator(self.source)
 
-    def frameReceived(self, frame):
-        """
-        """
-        frame_type, channel, payload = frame
-        if self.expected_types[channel] != frame_type:
-            # produce error to channel consumer
-
-        elif frame_type == 1:
-            self._process_method_frame(channel, payload)
-        elif frame_type == 2:
-            self._process_content_header(channel, payload)
-        elif frame_type == 3:
-            self._process_content_body(channel, payload)
 
     @defer.inlineCallbacks
     def next(self):
         self.running = True
-        while self.running:
-            frame_type, channel, payload = yield self.source.get()
+        # while self.running:
+        while True:
+            log.msg('nex reader')
+            # frame_type, channel, payload = yield self.source.get()
+            frame_type, channel, payload = yield self.q_it.next()
             if self.expected_types[channel] != frame_type:
                 # error...
-                pass
+                log.msg('next err reader method')
             elif frame_type == 1:
-                self.running = self._process_method_frame(channel, payload)
+                self._process_method_frame(channel, payload)
             elif frame_type == 2:
-                self.running = self._process_content_header(channel, payload)
+                self._process_content_header(channel, payload)
             elif frame_type == 3:
-                self.running = self._process_content_body(channel, payload)
-        defer.returnValue(None)
+                self._process_content_body(channel, payload)
 
     def _next_method(self):
         """
@@ -190,10 +184,8 @@ class MethodReader(object):
             #
             self.partial_messages[channel] = _PartialMessage(method_sig, args)
             self.expected_types[channel] = 2
-            return True
         else:
             self.method_queue.put((channel, method_sig, args, None))
-            return False
 
 
     def _process_content_header(self, channel, payload):
@@ -211,13 +203,11 @@ class MethodReader(object):
             self.method_queue.put((channel, partial.method_sig, partial.args, partial.msg))
             del self.partial_messages[channel]
             self.expected_types[channel] = 1
-            return False
         else:
             #
             # wait for the content-body
             #
             self.expected_types[channel] = 3
-            return True
 
 
     def _process_content_body(self, channel, payload):
@@ -235,8 +225,6 @@ class MethodReader(object):
             self.method_queue.put((channel, partial.method_sig, partial.args, partial.msg))
             del self.partial_messages[channel]
             self.expected_types[channel] = 1
-            return False
-        return True
 
 
 
