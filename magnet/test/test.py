@@ -4,25 +4,22 @@
 __author__='hubbard'
 __date__ ='$Apr 27, 2009 10:15:30 AM$'
 
-import os
+from NIB import NIB
 import logging
-
-from twisted.trial import unittest
-from twisted.internet.defer import inlineCallbacks
-from twisted.internet.defer import Deferred, inlineCallbacks
-from twisted.internet import protocol, reactor
-
 import magnet
 from magnet import field
-
-from NIB import NIB
+import os
+from twisted.internet import reactor
+from twisted.internet.defer import inlineCallbacks
+from twisted.internet.error import DNSLookupError
+from twisted.trial import unittest
 
 # Spec file is loaded from the egg bundle
 spec_path_def = os.path.join(magnet.__path__[0], 'spec', 'amqp0-8.xml')
 
 class NIBTest(unittest.TestCase):
     def setUp(self):
-        logging.basicConfig(level=logging.DEBUG, \
+        logging.basicConfig(level=logging.ERROR, \
                 format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
 
         # Set a timeout for login failures and similar
@@ -30,9 +27,12 @@ class NIBTest(unittest.TestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        yield self.connector.stopService()
+        try:
+            yield self.connector.stopService()
+        except:
+            pass
 
-    @inlineCallbacks
+ #   @inlineCallbacks
     def go(self, hostName='amoeba.ucsd.edu'):
         # Create the instance
         self.nib = NIB()
@@ -44,16 +44,27 @@ class NIBTest(unittest.TestCase):
         d = self.connector.connect(host=hostName, spec_path=spec_path_def)
         # startService is where connectTCP actually gets called
         self.connector.startService()
-        dd = yield d
+#        dd = yield d
+        return d
 
     @inlineCallbacks
-    def test_bad_address(self):
-        yield self.go(hostName='bad.example')
-        assert self.nib.got_err == True
-        
-    @inlineCallbacks
-    def test_snd_rcv(self):
+    def test_pingPong(self):
+        """Send and receive basic messages using Magnet"""
         yield self.go(hostName='amoeba.ucsd.edu')
-        yield self.nib.pingPong(msg='For the lulz')
-        assert self.nib.got_ack == True
-        assert self.nib.got_err == False
+        yield self.nib.pingPong()
+        self.failUnless(self.nib.got_ack == True)
+        self.failUnless(self.nib.got_err == False)
+
+    @inlineCallbacks
+    def test_say_pingPong(self):
+        """Send a say command, wait for ack"""
+        yield self.go(hostName='amoeba.ucsd.edu')
+        yield self.nib.sayPingPong(msg='For the lulz')
+        self.failUnless(self.nib.got_ack == True)
+        self.failUnless(self.nib.got_err == False)
+
+#    @inlineCallbacks
+#    def test_bad_address(self):
+#        yield self.go(hostName='bad.example')
+#        d = self.go('bad.example')
+#        self.failUnlessFailure(d, DNSLookupError)

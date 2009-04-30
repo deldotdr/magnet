@@ -30,6 +30,12 @@ class NIB(pole.BasePole):
         self.got_ack = True
         return None
 
+    def action_ping(self, message_object):
+        """Triggered by ping messages, via Magnet"""
+        logging.debug('Got ping message')
+        self.sendOK(None)
+        return None
+
     def action_say(self, message_object):
         """Triggered by say messages, via Magnet"""
         to_say = message_object['payload']
@@ -52,12 +58,20 @@ class NIB(pole.BasePole):
         self.sendMessage(reply, 'test')
 
 
-    def doSend(self, msgString):
+    def doSendSay(self, msgString):
         """Sends a say message into the exchange, initiates the handshake."""
         self.got_ack = False
         self.got_err = False
         smsg = {'method': 'say', 'payload': msgString}
         logging.info('Sending say message')
+        self.sendMessage(smsg, 'test')
+
+    def doSendPing(self, msgString):
+        """Sends a ping message into the exchange, initiates the handshake."""
+        self.got_ack = False
+        self.got_err = False
+        smsg = {'method': 'ping', 'payload': msgString}
+        logging.info('Sending ping message')
         self.sendMessage(smsg, 'test')
 
     def waitForPingPong(self):
@@ -75,9 +89,21 @@ class NIB(pole.BasePole):
             raise MyError('timeout')
 
     def pingPong(self, msg='hi world'):
+        """Does a ping/ack loop, via callbacks. Messages are sent and received,
+        pretty decent communications test."""
+        self.got_ack = False
+        self.got_err = False
+        # Kick off the initial say command
+        self.doSendPing(msg)
+        # Return a deferred that's a threaded function waiting for it all to finish.
+        return threads.deferToThread(self.waitForPingPong)
+
+    def sayPingPong(self, msg='hello, world'):
         """Does a send/speak/ack loop, via callbacks. Messages are sent and received,
         pretty decent communications test."""
+        self.got_ack = False
+        self.got_err = False
         # Kick off the initial say command
-        self.doSend(msg)
+        self.doSendSay(msg)
         # Return a deferred that's a threaded function waiting for it all to finish.
         return threads.deferToThread(self.waitForPingPong)
