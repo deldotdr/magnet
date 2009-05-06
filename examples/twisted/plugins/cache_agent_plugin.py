@@ -10,6 +10,7 @@ import dap_getter
 
 class Wallet(pole.BasePole):
     """The Wallet class manages the cache. Yeah, I like puns.
+
     Uses:
     - redis for dataset directory
     - http error codes (200, 404) in message to denote returns
@@ -20,6 +21,7 @@ class Wallet(pole.BasePole):
     - ':' as KVS separator in Redis
 
     TODO: Persistant redis connection
+    TODO: figure out how to get magnet to setup logging for us, or get an init method
     """
 
     def __repr__(self):
@@ -30,9 +32,6 @@ class Wallet(pole.BasePole):
     # Magnet actions
     def action_dset_query(self, msg):
         """Query - is a dataset (or redis regex) in the cache?"""
-        # TODO figure out how to get magnet to setup logging for us, or get an init methods
-        logging.basicConfig(level=logging.DEBUG, \
-                format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
         dsetName = msg['payload']
         logging.info('Got query for "%s"' % dsetName)
         qr = self.dataset_query(dsetName)
@@ -61,7 +60,6 @@ class Wallet(pole.BasePole):
             self.reply_purged(dsetName)
         else:
             self.reply_dset_error(dsetName, msg)
-
 
     ###########################
     # Internal methods
@@ -156,11 +154,7 @@ class Wallet(pole.BasePole):
         logging.info('Cache hit on dataset expression "%s"' % dsetName)
         reply = self.makeMsg('dataset_reply', listing, 200)
         self.sendMessage(reply, 'dataset')
-
-
-logging.basicConfig(level=logging.DEBUG, \
-                        format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
+        
+###################################################################################
 # The plugin system uses this
 wallet = Wallet(routing_pattern='dataset')
-
-logging.debug('Top-level wallet code')
