@@ -22,8 +22,8 @@ class CacheClient(pole.BasePole):
 
     def action_dataset_reply(self, msg):
         """This catches replies from Wallet"""
-        logging.info('Got reply. Code %d "%s"' % (msg['return_code'], msg['payload']))
-        self.rc = msg['return_code']
+        logging.info('Got reply. Code %s"%s"' % (msg['return_code'], msg['payload']))
+        self.rc = int(msg['return_code'])
         self.got_reply = True
 
     def waitForReply(self):
@@ -66,7 +66,7 @@ class CacheTest(unittest.TestCase):
     def go(self, hostName='amoeba.ucsd.edu'):
         """Main method - sets up and starts the connection et al. Returns a deferred."""
         # Create the instance
-        self.cc = CacheClient()
+        self.cc = CacheClient(routing_pattern='dataset')
         # Adapt it to AMQP
         c = field.IAMQPClient(self.cc)
         # Create a connector

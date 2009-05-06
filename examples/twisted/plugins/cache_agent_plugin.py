@@ -36,7 +36,7 @@ class Wallet(pole.BasePole):
         dsetName = msg['payload']
         logging.info('Got dataset query for "%s"' % dsetName)
         qr = self.dataset_query(dsetName)
-        if qr != None:
+        if qr != []:
             self.reply_found(dsetName)
         else:
             self.reply_notfound(dsetName)
