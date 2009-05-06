@@ -37,7 +37,7 @@ class Wallet(pole.BasePole):
         logging.info('Got dataset query for "%s"' % dsetName)
         qr = self.dataset_query(dsetName)
         if qr != None:
-            self.reply_found(dsetNane)
+            self.reply_found(dsetName)
         else:
             self.reply_notfound(dsetName)
 
@@ -135,3 +135,11 @@ class Wallet(pole.BasePole):
         logging.info('Cache hit on dataset "%s"' % dsetName)
         reply = self.makeMsg('dataset_reply', 'Dataset "%s" cached' % dsetName, 200)
         self.sendMessage(reply, 'dataset')
+
+
+logging.basicConfig(level=logging.DEBUG, \
+                        format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
+# The plugin system uses this
+wallet = Wallet(routing_pattern='dataset')
+
+logging.debug('Top-level wallet code')
