@@ -29,15 +29,15 @@ class Wallet(pole.BasePole):
     ##########################
     # Magnet actions
     def action_dset_query(self, msg):
-        """Query - is a dataset in the cache?"""
+        """Query - is a dataset (or redis regex) in the cache?"""
         # TODO figure out how to get magnet to setup logging for us, or get an init methods
         logging.basicConfig(level=logging.DEBUG, \
                 format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
         dsetName = msg['payload']
-        logging.info('Got dataset query for "%s"' % dsetName)
+        logging.info('Got query for "%s"' % dsetName)
         qr = self.dataset_query(dsetName)
         if qr != []:
-            self.reply_found(dsetName)
+            self.reply_found(dsetName, qr)
         else:
             self.reply_notfound(dsetName)
 
@@ -45,9 +45,9 @@ class Wallet(pole.BasePole):
         """Command - please go add dataset to the cache"""
         dsetName = msg['payload']
         logging.info('Got fetch command for "%s"' % dsetName)
-        rc, msg = self.dataset_fetch(dsetName)
+        msg, rc = self.dataset_fetch(dsetName)
         if rc == 200:
-            self.reply_dset_cached(dsetName)
+            self.reply_cached(dsetName)
         else:
             self.reply_dset_error(dsetName, msg)
 
@@ -55,8 +55,13 @@ class Wallet(pole.BasePole):
         """Remove a dataset from the cache"""
         dsetName = msg['payload']
         logging.info('Got purge command for dataset "%s"' % dsetName)
-        self.dataset_purge(dsetName)
-        logging.info('Dataset purged')
+        rc = self.dataset_purge(dsetName)
+        if rc == 200:
+            logging.info('Dataset purged')
+            self.reply_purged(dsetName)
+        else:
+            self.reply_dset_error(dsetName, msg)
+
 
     ###########################
     # Internal methods
@@ -95,11 +100,11 @@ class Wallet(pole.BasePole):
 
     def dataset_update(self, dsetName, localName):
         """Add dataset to Redis post-download"""
-        logging.info('Updating redis with dataset "%s"' % dsetName)
+        logging.info('Updating redis with dataset "%s":%s' % (dsetName, localName))
         kvs = redis.Redis(host='amoeba.ucsd.edu')
 
         # Key is original name, value is local name
-        kvs.set(dsetName, localname)
+        kvs.set('%s%s' % (self.kvsPrefix(), dsetName), localName)
         kvs.disconnect()
 
     def dataset_purge(self, dsetName):
@@ -107,10 +112,26 @@ class Wallet(pole.BasePole):
         logging.info('Purging dataset "%s"' % dsetName)
 
         kvs = redis.Redis(host='amoeba.ucsd.edu')
-        localName = kvs.get(dsetName)
-        os.remove(localName)
-        kvs.delete(dsetName)
+        localName = kvs.get('%s%s' % (self.kvsPrefix(), dsetName))
+        if localName == None:
+            kvs.disconnect()
+            return 500
+
+        rc = os.remove(localName)
+        if rc == None:
+            kvs.delete(dsetName)
+            rc = 200
+        else:
+            rc = 500
         kvs.disconnect()
+        return rc
+
+
+    def reply_purged(self, dsetName):
+        """Inform client of successful cache removal"""
+        logging.info('cache purge succeeded')
+        reply = self.makeMsg('dataset_reply', 'Dataset "%s" purged OK' % dsetName, 200)
+        self.sendMessage(reply, 'dataset')
 
     def reply_cached(self, dsetName):
         """Inform client of successful cache addition"""
@@ -130,10 +151,10 @@ class Wallet(pole.BasePole):
         reply = self.makeMsg('dataset_reply', 'Dataset "%s" not found' % dsetName, 404)
         self.sendMessage(reply, 'dataset')
 
-    def reply_found(self, dsetName):
-        """Dataset is present in cache. FTW!"""
-        logging.info('Cache hit on dataset "%s"' % dsetName)
-        reply = self.makeMsg('dataset_reply', 'Dataset "%s" cached' % dsetName, 200)
+    def reply_found(self, dsetName, listing):
+        """Dataset or regex is present in cache. FTW!"""
+        logging.info('Cache hit on dataset expression "%s"' % dsetName)
+        reply = self.makeMsg('dataset_reply', listing, 200)
         self.sendMessage(reply, 'dataset')
 
 

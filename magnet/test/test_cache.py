@@ -22,8 +22,9 @@ class CacheClient(pole.BasePole):
 
     def action_dataset_reply(self, msg):
         """This catches replies from Wallet"""
-        logging.info('Got reply. Code %s"%s"' % (msg['return_code'], msg['payload']))
+#        logging.info('Got reply. Code %s: "%s"' % (msg['return_code'], msg['payload']))
         self.rc = int(msg['return_code'])
+        self.reply = msg['payload']
         self.got_reply = True
 
     def waitForReply(self):
@@ -46,11 +47,12 @@ class CacheClient(pole.BasePole):
     def sendMsg(self, msg, key):
         """Convenience method - clear reply flag before sending"""
         self.got_reply = False
+        self.reply = ''
         return self.sendMessage(msg, key)
 
 class CacheTest(unittest.TestCase):
     def setUp(self):
-        logging.basicConfig(level=logging.DEBUG, \
+        logging.basicConfig(level=logging.INFO, \
                 format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
 
         # Set a timeout for login failures and similar
@@ -83,38 +85,76 @@ class CacheTest(unittest.TestCase):
         """Try the various actions that wallet should enact"""
         yield self.go(hostName='amoeba.ucsd.edu')
 
-        logging.debug('Connected to amoeba, sending query')
+        logging.info('Connected to amoeba OK')
+
+        logging.info('Listing all datasets')
         cmd = self.cc.makeMsg('dset_query', '*')
         yield self.cc.sendMsg(cmd, 'dataset')
 
-        logging.debug('Waiting for reply...')
+        logging.info('Waiting for reply...')
         yield threads.deferToThread(self.cc.waitForReply)
         if self.cc.got_reply == True:
-            logging.info('Got reply! Code %d' % self.cc.rc)
+            logging.info('Listing: %s' % self.cc.reply)
         else:
             logging.error('No reply from Wallet!')
             self.fail()
 
-        #
-        #cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/data.csv')
-        #yield self.cc.sendMsg(cmd, 'dataset')
-        #yield deferToThread(self.cc.waitForReply)
-        #
-        #cmd = self.cc.makeMsg('dset_fetch', 'http://localhost:8080/data.csv')
-        #yield self.cc.sendMsg(cmd, 'dataset')
-        #yield deferToThread(self.cc.waitForReply)
-        #
-        ## Should show up now
-        #cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/data.csv')
-        #yield self.cc.sendMsg(cmd, 'dataset')
-        #yield deferToThread(self.cc.waitForReply)
-        #
-        ## Remove it
-        #cmd = self.cc.makeMsg('dset_purge', 'http://localhost:8080/data.csv')
-        #yield self.cc.sendMsg(cmd, 'dataset')
-        #yield deferToThread(self.cc.waitForReply)
-        #
-        ## should now be 404
-        #cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/data.csv')
-        #yield self.cc.sendMsg(cmd, 'dataset')
-        #yield deferToThread(self.cc.waitForReply)
+        # Known-missing dataset
+        logging.info('Trying to query bad dataset')
+        cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/bad-data.csv')
+        yield self.cc.sendMsg(cmd, 'dataset')
+        yield threads.deferToThread(self.cc.waitForReply)
+        if self.cc.got_reply == True:
+            if self.cc.rc == 404:
+                logging.info('Code 404 as expected, good')
+            else:
+                self.fail('Expected code 404!')
+        else:
+            logging.error('No reply from Wallet!')
+            self.fail('No reply from Wallet')
+
+        # Download the dataset into the local cache
+        logging.info('Trying dataset download')
+        cmd = self.cc.makeMsg('dset_fetch', 'http://localhost:8080/data.csv')
+        yield self.cc.sendMsg(cmd, 'dataset')
+        yield threads.deferToThread(self.cc.waitForReply)
+        if self.cc.got_reply == True:
+            logging.info('Got reply! Code %d' % self.cc.rc)
+            self.failUnlessEqual(200, self.cc.rc)
+        else:
+            logging.error('No reply from Wallet!')
+            self.fail()
+
+        # Verify that its there
+        logging.info('Checking for newly downloaded dataset')
+        cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/data.csv')
+        yield self.cc.sendMsg(cmd, 'dataset')
+        yield threads.deferToThread(self.cc.waitForReply)
+        if self.cc.got_reply == True:
+            logging.info('Got reply! Code %d' % self.cc.rc)
+            self.failUnlessEqual(200, self.cc.rc)
+        else:
+            logging.error('No reply from Wallet!')
+            self.fail()
+
+        logging.info('Purging downloaded dataset')
+        cmd = self.cc.makeMsg('dset_purge', 'http://localhost:8080/data.csv')
+        yield self.cc.sendMsg(cmd, 'dataset')
+        yield threads.deferToThread(self.cc.waitForReply)
+        if self.cc.got_reply == True:
+            logging.info('Got reply! Code %d' % self.cc.rc)
+            self.failUnlessEqual(200, self.cc.rc)
+        else:
+            logging.error('No reply from Wallet!')
+            self.fail()
+
+        logging.info('Listing all datasets')
+        cmd = self.cc.makeMsg('dset_query', '*')
+        yield self.cc.sendMsg(cmd, 'dataset')
+        yield threads.deferToThread(self.cc.waitForReply)
+        if self.cc.got_reply == True:
+            logging.info('Got reply! Code %d' % self.cc.rc)
+            self.failUnlessEqual(200, self.cc.rc)
+        else:
+            logging.error('No reply from Wallet!')
+            self.fail()
