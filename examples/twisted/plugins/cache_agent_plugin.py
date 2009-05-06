@@ -124,7 +124,6 @@ class Wallet(pole.BasePole):
         kvs.disconnect()
         return rc
 
-
     def reply_purged(self, dsetName):
         """Inform client of successful cache removal"""
         logging.info('cache purge succeeded')
@@ -145,7 +144,7 @@ class Wallet(pole.BasePole):
 
     def reply_notfound(self, dsetName):
         """Query returned no results."""
-        logging.info('Returning 404 on dataset "%s"' % dsetName)
+        logging.warning('Returning 404 on dataset expression "%s"' % dsetName)
         reply = self.makeMsg('dataset_reply', 'Dataset "%s" not found' % dsetName, 404)
         self.sendMessage(reply, 'dataset')
 
@@ -154,7 +153,7 @@ class Wallet(pole.BasePole):
         logging.info('Cache hit on dataset expression "%s"' % dsetName)
         reply = self.makeMsg('dataset_reply', listing, 200)
         self.sendMessage(reply, 'dataset')
-        
+
 ###################################################################################
 # The plugin system uses this
 wallet = Wallet(routing_pattern='dataset')
