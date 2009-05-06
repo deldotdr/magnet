@@ -6,7 +6,7 @@ import logging
 import magnet
 from magnet import field, pole
 import os
-from twisted.internet import reactor
+from twisted.internet import reactor, threads
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.error import DNSLookupError, UserError
 from twisted.trial import unittest
@@ -43,6 +43,11 @@ class CacheClient(pole.BasePole):
         msg['return_code'] = str(returnCode)
         return msg
 
+    def sendMsg(self, msg, key):
+        """Convenience method - clear reply flag before sending"""
+        self.got_reply = False
+        return self.sendMessage(msg, key)
+
 class CacheTest(unittest.TestCase):
     def setUp(self):
         logging.basicConfig(level=logging.DEBUG, \
@@ -59,7 +64,7 @@ class CacheTest(unittest.TestCase):
             pass
 
     def go(self, hostName='amoeba.ucsd.edu'):
-        """Main method - sets up and starts the connection et al"""
+        """Main method - sets up and starts the connection et al. Returns a deferred."""
         # Create the instance
         self.cc = CacheClient()
         # Adapt it to AMQP
@@ -74,38 +79,42 @@ class CacheTest(unittest.TestCase):
 
 
     @inlineCallbacks
-    def sendMsg(self, msg, key):
-        self.cc.got_reply = False
-        return self.sendMsg(msg, key)
-
-    @inlineCallbacks
     def test_commands(self):
         """Try the various actions that wallet should enact"""
         yield self.go(hostName='amoeba.ucsd.edu')
 
+        logging.debug('Connected to amoeba, sending query')
         cmd = self.cc.makeMsg('dset_query', '*')
-        yield self.sendMsg(cmd, 'dataset')
-        yield deferToThread(self.cc.waitForReply)
+        yield self.cc.sendMsg(cmd, 'dataset')
 
-        cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/data.csv')
-        yield self.sendMsg(cmd, 'dataset')
-        yield deferToThread(self.cc.waitForReply)
+        logging.debug('Waiting for reply...')
+        yield threads.deferToThread(self.cc.waitForReply)
+        if self.cc.got_reply == True:
+            logging.info('Got reply! Code %d' % self.cc.rc)
+        else:
+            logging.error('No reply from Wallet!')
+            self.fail()
 
-        cmd = self.cc.makeMsg('dset_fetch', 'http://localhost:8080/data.csv')
-        yield self.sendMsg(cmd, 'dataset')
-        yield deferToThread(self.cc.waitForReply)
-
-        # Should show up now
-        cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/data.csv')
-        yield self.sendMsg(cmd, 'dataset')
-        yield deferToThread(self.cc.waitForReply)
-
-        # Remove it
-        cmd = self.cc.makeMsg('dset_purge', 'http://localhost:8080/data.csv')
-        yield self.sendMsg(cmd, 'dataset')
-        yield deferToThread(self.cc.waitForReply)
-
-        # should now be 404
-        cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/data.csv')
-        yield self.sendMsg(cmd, 'dataset')
-        yield deferToThread(self.cc.waitForReply)
+        #
+        #cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/data.csv')
+        #yield self.cc.sendMsg(cmd, 'dataset')
+        #yield deferToThread(self.cc.waitForReply)
+        #
+        #cmd = self.cc.makeMsg('dset_fetch', 'http://localhost:8080/data.csv')
+        #yield self.cc.sendMsg(cmd, 'dataset')
+        #yield deferToThread(self.cc.waitForReply)
+        #
+        ## Should show up now
+        #cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/data.csv')
+        #yield self.cc.sendMsg(cmd, 'dataset')
+        #yield deferToThread(self.cc.waitForReply)
+        #
+        ## Remove it
+        #cmd = self.cc.makeMsg('dset_purge', 'http://localhost:8080/data.csv')
+        #yield self.cc.sendMsg(cmd, 'dataset')
+        #yield deferToThread(self.cc.waitForReply)
+        #
+        ## should now be 404
+        #cmd = self.cc.makeMsg('dset_query', 'http://localhost:8080/data.csv')
+        #yield self.cc.sendMsg(cmd, 'dataset')
+        #yield deferToThread(self.cc.waitForReply)

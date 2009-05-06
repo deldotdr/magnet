@@ -6,10 +6,10 @@ import logging
 import os
 from magnet import pole, field
 import redis
-from dap_tools import dap_getter
+import dap_getter
 
-class wallet(pole.BasePole):
-    """The wallet class manages the cache. Yeah, I like puns.
+class Wallet(pole.BasePole):
+    """The Wallet class manages the cache. Yeah, I like puns.
     Uses:
     - redis for dataset directory
     - http error codes (200, 404) in message to denote returns
@@ -30,6 +30,9 @@ class wallet(pole.BasePole):
     # Magnet actions
     def action_dset_query(self, msg):
         """Query - is a dataset in the cache?"""
+        # TODO figure out how to get magnet to setup logging for us, or get an init methods
+        logging.basicConfig(level=logging.DEBUG, \
+                format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
         dsetName = msg['payload']
         logging.info('Got dataset query for "%s"' % dsetName)
         qr = self.dataset_query(dsetName)
@@ -102,8 +105,10 @@ class wallet(pole.BasePole):
     def dataset_purge(self, dsetName):
         """Purge a dataset from cache and directory"""
         logging.info('Purging dataset "%s"' % dsetName)
-        os.remove(dsetName)
+
         kvs = redis.Redis(host='amoeba.ucsd.edu')
+        localName = kvs.get(dsetName)
+        os.remove(localName)
         kvs.delete(dsetName)
         kvs.disconnect()
 
