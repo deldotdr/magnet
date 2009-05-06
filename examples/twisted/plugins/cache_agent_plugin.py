@@ -119,7 +119,7 @@ class Wallet(pole.BasePole):
 
         rc = os.remove(localName)
         if rc == None:
-            kvs.delete(dsetName)
+            kvs.delete('%s%s' % (self.kvsPrefix(), dsetName))
             rc = 200
         else:
             rc = 500
