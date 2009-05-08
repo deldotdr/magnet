@@ -1,5 +1,12 @@
 #!/usr/bin/env python
+"""Unit test code for the Wallet cache controller.
 
+Requires:
+ - Redis on amoeba
+ - Rabbit on amoeba
+ - DAP server on localhost:8080 with sample.csv
+
+"""
 __author__='hubbard'
 
 import logging
@@ -77,9 +84,6 @@ class CacheTest(unittest.TestCase):
         # startService is where connectTCP actually gets called
         self.connector.startService()
         return d
-
-
-
 
     @inlineCallbacks
     def test_cache_listing(self):
