@@ -141,7 +141,6 @@ class CacheTest(unittest.TestCase):
         yield self.cc.sendMsg(cmd, 'dataset')
         yield threads.deferToThread(self.cc.waitForReply)
         if self.cc.got_reply == True:
-            logging.debug('Got reply! Code %d' % self.cc.rc)
             self.failUnlessEqual(200, self.cc.rc)
         else:
             logging.error('No reply from Wallet!')

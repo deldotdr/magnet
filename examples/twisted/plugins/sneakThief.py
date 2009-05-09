@@ -31,7 +31,7 @@ def errCB(failure):
     reactor.stop()
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, \
+    logging.basicConfig(level=logging.DEBUG, \
                 format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
 
     SPEC = '/Users/hubbard/code/basicAmqp/amqp0-8.xml'

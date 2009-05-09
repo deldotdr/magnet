@@ -36,7 +36,7 @@ class Wallet(pole.BasePole):
         logging.info('Got query for "%s"' % dsetName)
         qr = self.dataset_query(dsetName)
         if qr != []:
-            self.reply_found(dsetName, qr)
+            self.reply_found(dsetName, str(qr))
         else:
             self.reply_notfound(dsetName)
 
@@ -51,7 +51,7 @@ class Wallet(pole.BasePole):
             self.reply_dset_error(dsetName, msg)
 
     def action_dset_purge(self, msg):
-        """Remove a dataset from the cache"""
+        """Command - remove a dataset from the cache"""
         dsetName = msg['payload']
         logging.info('Got purge command for dataset "%s"' % dsetName)
         rc = self.dataset_purge(dsetName)
@@ -117,10 +117,11 @@ class Wallet(pole.BasePole):
 
         rc = os.remove(localName)
         if rc == None:
-            kvs.delete('%s%s' % (self.kvsPrefix(), dsetName))
             rc = 200
         else:
-            rc = 500
+            rc = 501
+        # Delete from redis even if couldn't delete from disk...skew error
+        kvs.delete('%s%s' % (self.kvsPrefix(), dsetName))
         kvs.disconnect()
         return rc
 
