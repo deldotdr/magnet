@@ -19,6 +19,19 @@ def unserialize_application_message(serialized_message_object, unserializer='jso
     return message_object
 
 
-def message():
-    """create a message with a certain structure
+class AgentMessage(object):
+    """Message format passed between agents
+    interaction: or role:
+    Control
+    Monitor
+    Capability
+    Contract
+    Agent Control
     """
+    def __init__(self):
+        pass
+
+class RoleMessage(object):
+    """Messaeg format passed between actors
+    """
+    pass
