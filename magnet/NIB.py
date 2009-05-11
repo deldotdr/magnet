@@ -9,6 +9,8 @@ from twisted.internet import protocol, reactor, threads
 import logging
 from magnet import pole, field
 from twisted.internet.utils import getProcessOutput
+from twisted.internet.task import LoopingCall
+
 import time
 
 class MyError(Exception):
@@ -24,6 +26,7 @@ class NIB(pole.BasePole):
        See pingPong method.
        """
 
+    ## The next two methods are Magnet-triggered actions
     def action_reply(self, message_object):
         """Triggered by replies to say, via Magnet"""
         logging.info('Got reply message: %s' % message_object['payload'])
@@ -32,16 +35,8 @@ class NIB(pole.BasePole):
 
     def action_ping(self, message_object):
         """Triggered by ping messages, via Magnet"""
-        logging.debug('Got ping message')
+        logging.info('Got ping message')
         self.sendOK(None)
-        return None
-
-    def action_say(self, message_object):
-        """Triggered by say messages, via Magnet"""
-        to_say = message_object['payload']
-        logging.debug('Got say message: %s' % message_object['payload'])
-        d = getProcessOutput('/usr/bin/say', ['-v', 'pipe organ', to_say])
-        d.addCallback(self.sendOK).addErrback(self.sendError)
         return None
 
     def sendOK(self, result):
@@ -57,14 +52,6 @@ class NIB(pole.BasePole):
         logging.error('Sending back an error message')
         self.sendMessage(reply, 'test')
 
-
-    def doSendSay(self, msgString):
-        """Sends a say message into the exchange, initiates the handshake."""
-        self.got_ack = False
-        self.got_err = False
-        smsg = {'method': 'say', 'payload': msgString}
-        logging.info('Sending say message')
-        self.sendMessage(smsg, 'test')
 
     def doSendPing(self, msgString):
         """Sends a ping message into the exchange, initiates the handshake."""
@@ -88,6 +75,10 @@ class NIB(pole.BasePole):
         else:
             raise MyError('timeout')
 
+    def loopingDoneCheck(self):
+        d = Deferred()
+        
+
     def pingPong(self, msg='hi world'):
         """Does a ping/ack loop, via callbacks. Messages are sent and received,
         pretty decent communications test."""
@@ -95,15 +86,5 @@ class NIB(pole.BasePole):
         self.got_err = False
         # Kick off the initial say command
         self.doSendPing(msg)
-        # Return a deferred that's a threaded function waiting for it all to finish.
-        return threads.deferToThread(self.waitForPingPong)
-
-    def sayPingPong(self, msg='hello, world'):
-        """Does a send/speak/ack loop, via callbacks. Messages are sent and received,
-        pretty decent communications test."""
-        self.got_ack = False
-        self.got_err = False
-        # Kick off the initial say command
-        self.doSendSay(msg)
         # Return a deferred that's a threaded function waiting for it all to finish.
         return threads.deferToThread(self.waitForPingPong)

@@ -11,8 +11,9 @@ from magnet import field
 import os
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
-from twisted.internet.error import DNSLookupError
+from twisted.internet.error import DNSLookupError, UserError
 from twisted.trial import unittest
+from twisted.internet.base import DelayedCall
 
 # Spec file is loaded from the egg bundle
 spec_path_def = os.path.join(magnet.__path__[0], 'spec', 'amqp0-8.xml')
@@ -24,6 +25,8 @@ class NIBTest(unittest.TestCase):
 
         # Set a timeout for login failures and similar
         self.timeout = 10
+
+#        DelayedCall.debug = True
 
     @inlineCallbacks
     def tearDown(self):
@@ -49,20 +52,13 @@ class NIBTest(unittest.TestCase):
     def test_pingPong(self):
         """Send and receive basic messages using Magnet"""
         yield self.go(hostName='amoeba.ucsd.edu')
-        yield self.nib.pingPong()
-        self.failUnless(self.nib.got_ack == True)
-        self.failUnless(self.nib.got_err == False)
+        # Send/receive 10 times
+        for x in range(1,11):
+            yield self.nib.pingPong()
+            self.failUnless(self.nib.got_ack == True)
+            self.failUnless(self.nib.got_err == False)
 
-    @inlineCallbacks
-    def test_say_pingPong(self):
-        """Send a say command, wait for ack"""
-        yield self.go(hostName='amoeba.ucsd.edu')
-        yield self.nib.sayPingPong(msg='For the lulz')
-        self.failUnless(self.nib.got_ack == True)
-        self.failUnless(self.nib.got_err == False)
-
-#    @inlineCallbacks
-#    def test_bad_address(self):
-#        yield self.go(hostName='bad.example')
-#        d = self.go('bad.example')
-#        self.failUnlessFailure(d, DNSLookupError)
+ #   @inlineCallbacks
+ #   def test_bad_address(self):
+ #       d = self.go(hostName='bad.example')
+ #       self.failUnlessFailure(d,UserError)
