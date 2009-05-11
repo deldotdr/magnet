@@ -34,15 +34,17 @@ class Say(pole.Role):
         return None
 
 
-say_role = Say('Control')
+# say_role = Say('Control')
+agent_control_role = pole.AgentControl()
 
-
-EXCHANGE = 'mac-demo'
-EXCHANGE = 'magnet'
+EXCHANGE = 'agents'
+# EXCHANGE = 'magnet'
 RESOURCE = 'apple'
 
 macAgent = pole.Agent(EXCHANGE, RESOURCE)
-macAgent.addRole(say_role)
+# macAgent.addRole(say_role)
+macAgent.addAgentContact('Controller', ('agents', 'Controller'))
+macAgent.addRole(agent_control_role)
 
 log.msg('make Channel manager')
 manlay = field.ChannelManagementLayer()

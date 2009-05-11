@@ -142,6 +142,7 @@ class BasePole(service.Service):
         pass
 
 class SendOne(BasePole):
+    exchange='agents'
 
     def send_when_running(self, routing_key, command, payload):
         self.send_routing_key = routing_key
@@ -241,11 +242,13 @@ class Role(service.Service):
     Interaction type of a resource agent; contains set of actions.
     Ex: Controlling an OS application process.
 
-    Roles have finite state machine 
+    Roles have a finite state machine 
     """
+    agent = None
+    name = None
+    send_when_running = []
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
 
         for m in self.__dict__.keys():
             if m.startswith('action_'):
@@ -255,12 +258,21 @@ class Role(service.Service):
         """iterate over all roles defined in the class"""
         return iter(self.actions)
 
+    def setAgent(self, agent):
+        """When a role is added to an agent, the agent sets this reference
+        to itself.
+        """
+        self.agent = agent
+
     def startService(self):
         """
-        Get a consumer
         """
         log.msg('Role start')
         service.Service.startService(self)
+        for s in self.send_when_running:
+            log.msg('%s StartService Sending %s' % (self.name, s))
+            m = getattr(self, s)
+            m()
 
     def consume_message(self, message_object):
         """
@@ -273,9 +285,75 @@ class Role(service.Service):
         res = defer.maybeDeferred(method, message_object)
         return res
 
+    def sendMessage(self, resource_name, message_payload):
+        """Send a message from a role to another
+        """
+        # message_object = {'role':self.name,
+        #                 'payload':message_payload}
+        self.agent.sendMessage(resource_name, self.name, message_payload)
 
 
+class ResourceControlRole(Role):
+    """Role for controlling a reource.
+    """
+    name = 'Control'
 
+class ResourceMonitorRole(Role):
+    """Role for monitoring a resource.
+    """
+    name = 'Monitor'
+
+class ResourceCapability(Role):
+    """Role for utilizing a resource capability.
+    """
+    name = 'Capability' # hmm..this is silly?
+
+class AgentControl(Role):
+    """Role for controling an agent.
+    """
+    name = 'Agent Control'
+    send_when_running = ['register']
+
+    def register(self):
+        """Say hello to a controller
+        """
+        role_message = {'method':'register',
+                        'agent_id':self.agent.unique_id,
+                        'agent_name':self.agent.name}
+        self.sendMessage('Controller', role_message)
+
+    def action_register_ok(self, message_object):
+        heartbeat = message_object['payload']
+        self.agent.heartbeat.beat(heartbeat)
+
+class HeartBeat(object):
+    """
+    Simple heartbeat.
+    Thin wrapper around task.LoopingCall
+    Needs a send function to send the heartbeat.
+    """
+
+    def __init__(self, send_f, agent):
+        """
+        send_f: the send function to call
+        exchange: exchange to send to
+        routing_key: route to address
+        """
+        role_message = {'method':'heartbeat',
+                        'agent_id':agent.unique_id}
+        a = ('Controller', 'Agent Control', role_message,)
+        self.heart = task.LoopingCall(send_f, *a)
+        log.msg(self.heart.a)
+
+
+    def beat(self, rate):
+        """set heart rate and start heartbeat
+        rate: seconds
+        """
+        d = self.heart.start(rate)
+
+    def stop(self):
+        self.heart.stop()
 
 class Agent(service.Service):
     """Represents a resource.
@@ -294,7 +372,7 @@ class Agent(service.Service):
     agent_chan = None
     name = None
 
-    def __init__(self, exchange, resource_name, unique_name=None):
+    def __init__(self, exchange, resource_name, unique_id=None):
         """
         Resource name is the canonical name for this agent with in a system.
         unique_name is for addressing specific instances of an agent type
@@ -303,10 +381,16 @@ class Agent(service.Service):
         self.exchange = exchange
         self.resource_name = resource_name
         self.name = resource_name
+        if unique_id is None:
+            unique_id = uuid.uuid4().hex
+        self.unique_id = unique_id
+        log.msg('Agent %s unique_id: %s' % (self.name, self.unique_id))
 
         self.roles = []
         self.role_collection = service.MultiService()
         # self.role_collection.setServiceParent(self)
+        self.known_agents = {} # Other agents this agent can talk to
+        self.heartbeat = HeartBeat(self.sendMessage, self)
 
     def __iter__(self):
         """iterate over all roles defined in the class"""
@@ -327,6 +411,13 @@ class Agent(service.Service):
         service.Service.stopService(self)
         self.role_collection.stopService()
 
+    def addAgentContact(self, name, address):
+        """Add an agent this agent can talk to.
+        name: name of agent (resource name...)
+        address: tuple (exchange, routing_key)
+        """
+        self.known_agents[name] = address
+
     def addRole(self, role):
         """
         roles are how agents handle messages.
@@ -337,6 +428,7 @@ class Agent(service.Service):
          - unique queue, consumed only by this role
         """
         self.role_collection.addService(role)
+        role.setAgent(self)
 
 
     def consume_message(self, agent_message):
@@ -355,9 +447,18 @@ class Agent(service.Service):
         self.agent_chan.listen_to_queue(self.consume_message)
 
 
-
-    def sendMessage(self, message_object, key):
-        self.parent.sendMessage(message_object, key)
+    def sendMessage(self, to_name, to_role, message_object):
+        """send agent message
+        The Agent, or a Role within the agent, addresses the message to
+        another agent.
+        How should the exchange and routing_key be determined; Agents know
+        about and talk to other agents...
+        """
+        exchange, routing_key = self.known_agents.get(to_name)
+        agent_message = {'role':to_role,
+                        'payload':message_object}
+        self.agent_chan.send_message(exchange, routing_key, 
+                                                    agent_message)
 
 
 class SimpleAgent(service.Service):

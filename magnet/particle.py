@@ -1,13 +1,9 @@
 """
-The serialization of the messages. 
-
-For now, think of messages as JSON objects; it can grow from here.
+Message formats
 
 """
 
 import simplejson as json
-
-
 
 
 def serialize_application_message(message_object, serializer='json'):
@@ -24,6 +20,7 @@ class AgentMessage(object):
     interaction: or role:
     Control
     Monitor
+    Provision
     Capability
     Contract
     Agent Control

@@ -407,7 +407,7 @@ class ChannelWrapper(object):
         """
         serialized_agent_message = particle.serialize_application_message(agent_message)
         amqp_content = content.Content(serialized_agent_message)
-        self.channel.basic_produce(exchange=exchange,
+        self.channel.basic_publish(exchange=exchange,
                 routing_key=routing_key, content=amqp_content)
 
     @defer.inlineCallbacks
@@ -420,9 +420,9 @@ class ChannelWrapper(object):
 
 
 
-
 class ChannelManagementLayer(object):
-    """
+    """Simple agent manager.
+    Coordinates agents with amqp channels.
     """
     active = False
     next_channel_id = 1
@@ -461,7 +461,8 @@ class ChannelManagementLayer(object):
     def startAgent(self, name):
         agent = self.agents.get(name)
         incoming_queue, channel = yield self._new_consuming_channel(
-                                    agent.exchange, agent.resource_name)
+                                    agent.exchange, agent.resource_name,
+                                    unique_id=agent.unique_id)
         agent_chan = ChannelWrapper(channel, incoming_queue)
         agent.activateAgent(agent_chan) 
 
@@ -469,7 +470,7 @@ class ChannelManagementLayer(object):
         self.agents.get(name).stopAgent()
 
     @defer.inlineCallbacks
-    def _new_consuming_channel(self, exchange, routing_key):
+    def _new_consuming_channel(self, exchange, routing_key, unique_id=None):
         log.msg('new consumer channel')
         channel_num = self.next_channel_id 
         self.next_channel_id += 1
@@ -481,6 +482,11 @@ class ChannelManagementLayer(object):
         yield channel.queue_bind(queue=reply.queue,
                                 exchange=exchange,
                                 routing_key=routing_key)
+        if unique_id is not None:
+            yield channel.queue_bind(queue=reply.queue,
+                                    exchange=exchange,
+                                    routing_key=unique_id)
+
 
         consumer_tag = str(uuid.uuid4())
         yield channel.basic_consume(queue=reply.queue, consumer_tag=consumer_tag)
