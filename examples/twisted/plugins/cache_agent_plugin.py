@@ -7,6 +7,7 @@ import os
 from magnet import pole, field
 import redis
 import dap_getter
+from exceptions import OSError
 
 class Wallet(pole.BasePole):
     """The Wallet class manages the cache. Yeah, I like puns.
@@ -32,6 +33,7 @@ class Wallet(pole.BasePole):
     # Magnet actions
     def action_dset_query(self, msg):
         """Query - is a dataset (or redis regex) in the cache?"""
+        # TODO: Move this to DF Agent?
         dsetName = msg['payload']
         logging.info('Got query for "%s"' % dsetName)
         qr = self.dataset_query(dsetName)
@@ -112,14 +114,18 @@ class Wallet(pole.BasePole):
         kvs = redis.Redis(host='amoeba.ucsd.edu')
         localName = kvs.get('%s%s' % (self.kvsPrefix(), dsetName))
         if localName == None:
+            logging.warning('Dataset not found in Redis')
             kvs.disconnect()
             return 500
-
-        rc = os.remove(localName)
-        if rc == None:
-            rc = 200
-        else:
+        try:
+            rc = os.remove(localName)
+            if rc == None:
+                rc = 200
+            else:
+                rc = 501
+        except OSError:
             rc = 501
+            
         # Delete from redis even if couldn't delete from disk...skew error
         kvs.delete('%s%s' % (self.kvsPrefix(), dsetName))
         kvs.disconnect()
@@ -140,7 +146,8 @@ class Wallet(pole.BasePole):
     def reply_dset_error(self, dsetName, msg):
         """Inform client of cache failure"""
         logging.error('Cache op of "%s" failed, "%s"' % (dsetName, msg))
-        reply = self.makeMsg('dataset_reply', 'Error caching dataset "%s": "%s"'(dsetName, msg), 500)
+        # TODO: Propagate real error code & perror string
+        reply = self.makeMsg('dataset_reply', 'Error caching dataset "%s": File error' % dsetName, 500)
         self.sendMessage(reply, 'dataset')
 
     def reply_notfound(self, dsetName):

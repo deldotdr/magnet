@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     logging.debug('Connecting to magnet and AMQP...')
     w_connector = field.AMQPClientConnectorService(reactor, field.IAMQPClient(w_agent), name='w_agent')
-    w_connector.connect(host='amoeba.ucsd.edu', spec_path=SPEC).addCallback(okCB).addErrback(errCB)
+    w_connector.connect(host='localhost', spec_path=SPEC).addCallback(okCB).addErrback(errCB)
     w_connector.startService()
 
     reactor.run()

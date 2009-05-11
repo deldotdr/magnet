@@ -71,7 +71,7 @@ class CacheTest(unittest.TestCase):
         except:
             pass
 
-    def go(self, hostName='amoeba.ucsd.edu'):
+    def go(self, hostName='localhost'):
         """Main method - sets up and starts the connection et al. Returns a deferred."""
         # Create the instance
         self.cc = CacheClient(routing_pattern='dataset')
@@ -88,9 +88,10 @@ class CacheTest(unittest.TestCase):
     @inlineCallbacks
     def test_cache_listing(self):
         """Try simple list-all"""
-        yield self.go(hostName='amoeba.ucsd.edu')
+        host = 'localhost'
+        yield self.go(hostName=host)
 
-        logging.debug('Connected to amoeba OK')
+        logging.debug('Connected to exchange OK')
 
         logging.debug('Listing all datasets')
         cmd = self.cc.makeMsg('dset_query', '*')
@@ -106,7 +107,7 @@ class CacheTest(unittest.TestCase):
     @inlineCallbacks
     def test_cache_lifecycle(self):
         """Try simple download/query/purge from local DAP server"""
-        host = 'amoeba.ucsd.edu'
+        host = 'localhost'
         dset = 'http://localhost:8080/sample.csv'
         yield self.go(hostName=host)
         logging.debug('Connected to amoeba OK')
