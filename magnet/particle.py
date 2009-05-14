@@ -1,13 +1,9 @@
 """
-The serialization of the messages. 
-
-For now, think of messages as JSON objects; it can grow from here.
+Message formats
 
 """
 
 import simplejson as json
-
-
 
 
 def serialize_application_message(message_object, serializer='json'):
@@ -19,6 +15,20 @@ def unserialize_application_message(serialized_message_object, unserializer='jso
     return message_object
 
 
-def message():
-    """create a message with a certain structure
+class AgentMessage(object):
+    """Message format passed between agents
+    interaction: or role:
+    Control
+    Monitor
+    Provision
+    Capability
+    Contract
+    Agent Control
     """
+    def __init__(self):
+        pass
+
+class RoleMessage(object):
+    """Messaeg format passed between actors
+    """
+    pass

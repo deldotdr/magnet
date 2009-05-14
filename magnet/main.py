@@ -83,7 +83,8 @@ class MagnetServiceMaker(object):
 
     def makeService(self, options):
         if options.subCommand == 'send':
-            send_one = pole.SendOne(routing_pattern='sendone')
+            send_one = pole.SendOne(exchange=options.subOptions['exchange'],
+                    routing_pattern='sendone')
             send_one.send_when_running(options.subOptions['routing_key'],
                                     options.subOptions['command'],
                                     options.subOptions['payload'])

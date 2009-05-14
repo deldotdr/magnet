@@ -20,6 +20,7 @@ import simplejson as json
 
 from zope.interface import Interface, implements
 
+from twisted.python import log
 from twisted.python import components
 from twisted.internet import defer
 from twisted.internet import reactor
@@ -40,27 +41,28 @@ class AMQPConnector(service.Service):
     
     This special connector is needed to login to the broker (normally
     TCPClient would be used).
+
+    This is a hack to make amqp work with the application framework.
     """
 
-    def __init__(self, host='localhost', port=5672, 
+    def __init__(self, channel_manager, host='localhost', port=5672, 
                         username='guest', password='guest', 
-                        vhost='/', spec_path='.',
-                        amqpadapter=None):
+                        vhost='/', spec_path='.'):
+        self.channel_manager = channel_manager
         self.host = host
         self.port = port
         self.username = username
         self.password = password
         self.vhost = vhost
         self.spec = self._spec(spec_path)
-        self.amqpadapter = amqpadapter
+        log.msg('Connector __init__')
 
-    def _connect(self):
+    def connect(self):
         d = defer.Deferred()
         delegate = TwistedDelegate()
+        amqpclient = AMQClient(delegate, self.vhost, self.spec)
         d.addCallback(self.gotConnection)
-        f = protocol._InstanceFactory(reactor,
-                self.amqpadapter.newConnection(delegate, self.vhost, self.spec), 
-                d)
+        f = protocol._InstanceFactory(reactor, amqpclient, d)
         return reactor.connectTCP(self.host, self.port, f)
 
     def _spec(self, spec_path):
@@ -68,19 +70,22 @@ class AMQPConnector(service.Service):
 
     def startService(self):
         service.Service.startService(self)
-        self.connection = self._connect()
+        self.tcpconnection = self.connect()
 
     def stopService(self):
-        self.connection.disconnect()
+        self.tcpconnection.disconnect()
 
     @defer.inlineCallbacks
-    def gotConnection(self, client):
+    def gotConnection(self, connection):
         """General handler for the brokers initial response.
-        This might be the place to handle a redirect when connecting to a
-        broker cluster
+        This should be apart of the client library.
+        It is here in case a redirect is needed since a redirect requires
+        the tcp connection to be rebuilt for a new host name.
+        Until then, handling of redirect should happen here.
         """
-        yield client.start({"LOGIN":self.username, "PASSWORD":self.password})
-        self.amqpadapter.client = client
+        yield connection.start({"LOGIN":self.username, "PASSWORD":self.password})
+        # self.amqpclient.connection = connection
+        self.channel_manager.makeConnection(connection)
 
 
 class AMQPClientConnectorService(service.MultiService):
@@ -188,7 +193,7 @@ class AMQPClientFromPoleService(object):
         channel_num = 1
         channel = yield self.client.channel(channel_num)
         yield channel.channel_open()
-        yield channel.exchange_declare(exchange=self.exchange, type="topic")
+        # yield channel.exchange_declare(exchange=self.exchange, type="topic")
         yield channel.channel_close(reply_code=200, reply_text="Ok")
         # yield self.startDirectConsumer()
         yield self.startTopicConsumer()
@@ -221,7 +226,7 @@ class AMQPClientFromPoleService(object):
         channel_num = 2
         channel = yield self.client.channel(channel_num)
         yield channel.channel_open()
-        yield channel.exchange_declare(exchange=self.exchange, type="topic")
+        # yield channel.exchange_declare(exchange=self.exchange, type="topic")
         reply = yield channel.queue_declare(auto_delete=True)
         yield channel.queue_bind(queue=reply.queue,
                                 exchange=self.exchange,
@@ -237,7 +242,7 @@ class AMQPClientFromPoleService(object):
     def startProducer(self):
         channel = yield self.client.channel(3)
         yield channel.channel_open()
-        yield channel.exchange_declare(exchange=self.exchange, type="topic", auto_delete=True)
+        # yield channel.exchange_declare(exchange=self.exchange, type="topic", auto_delete=True)
         self.channels.append(channel)
         self.send_channel = channel
 
@@ -378,3 +383,174 @@ class AMQPClientFromMultiPoleService(object):
         handler, this probably shouldn't be used for MultiPoles unless they
         set up actions that aren't held by a role.
         """
+
+@defer.inlineCallbacks
+def mesg_queue_gen(q):
+    while 1:
+        yield q.get()
+
+class ChannelWrapper(object):
+    """HACK!!! Don't let this go on for too long! ;-)
+        May 8, 2009
+    """
+
+    def __init__(self, channel, queue):
+        self.channel = channel
+        self.queue = queue
+
+    def send_message(self, exchange, routing_key, agent_message):
+        """This is a leak :( The Agent wants to send a message without
+        knowing about amqp specific configuration, but then the useful
+        delivery attributes are hidden, or redundantly re-exposed.
+        AMQP calls it basic produce because it should be a general middle
+        ware thing.
+        """
+        serialized_agent_message = particle.serialize_application_message(agent_message)
+        amqp_content = content.Content(serialized_agent_message)
+        self.channel.basic_publish(exchange=exchange,
+                routing_key=routing_key, content=amqp_content)
+
+    @defer.inlineCallbacks
+    def listen_to_queue(self, handler):
+        log.msg('start listen to queue')
+        amqp_message = yield self.queue.get()
+        log.msg('yieled message')
+        message_object = particle.unserialize_application_message(amqp_message.content.body)
+        handler(message_object)
+
+
+
+class ChannelManagementLayer(object):
+    """Simple agent manager.
+    Coordinates agents with amqp channels.
+    """
+    active = False
+    next_channel_id = 1
+
+    def __init__(self):
+        self.agents = {}
+        self.connection = None
+
+    def start(self):
+        self.active = True
+        for name in self.agents.keys():
+            reactor.callLater(0, self.startAgent, name)
+
+    def stop(self):
+        self.active = False
+        for name in self.agents.keys():
+            self.stopAgent(name)
+
+    def makeConnection(self, connection):
+        """
+        when the connector finishes setting up the tcp connection, it will
+        pass the amqp connection class here.
+        """
+        log.msg('makeConnection channel manag')
+        self.connection = connection
+        self.start()
+
+    def addAgent(self, agent):
+        if self.agents.has_key(agent.name):
+            raise KeyError("already have agent named %s" % agent.name)
+        self.agents[agent.name] = agent
+        if self.active:
+            self.startAgent(agent.name)
+
+    @defer.inlineCallbacks
+    def startAgent(self, name):
+        agent = self.agents.get(name)
+        incoming_queue, channel = yield self._new_consuming_channel(
+                                    agent.exchange, agent.resource_name,
+                                    unique_id=agent.unique_id)
+        agent_chan = ChannelWrapper(channel, incoming_queue)
+        agent.activateAgent(agent_chan) 
+
+    def stopAgent(self, name):
+        self.agents.get(name).stopAgent()
+
+    @defer.inlineCallbacks
+    def _new_consuming_channel(self, exchange, routing_key, unique_id=None):
+        log.msg('new consumer channel')
+        channel_num = self.next_channel_id 
+        self.next_channel_id += 1
+        channel = yield self.connection.channel(channel_num)
+        yield channel.channel_open()
+        # need to move this to configuration service
+        yield channel.exchange_declare(exchange=exchange, type="direct")
+        reply = yield channel.queue_declare(auto_delete=True)
+        yield channel.queue_bind(queue=reply.queue,
+                                exchange=exchange,
+                                routing_key=routing_key)
+        if unique_id is not None:
+            yield channel.queue_bind(queue=reply.queue,
+                                    exchange=exchange,
+                                    routing_key=unique_id)
+
+
+        consumer_tag = str(uuid.uuid4())
+        yield channel.basic_consume(queue=reply.queue, consumer_tag=consumer_tag)
+        chQueue = yield self.connection.queue(consumer_tag)
+        defer.returnValue((chQueue, channel))
+
+
+
+
+class AMQPClientFromAgent:
+    """I adapt an agent to look like an amqp client.
+    I set up consumers for the agent
+    I am the AMQP side of an agent management system.
+    """
+
+    implements(IAMQPClient)
+
+    def __init__(self, agent):
+        self.agent = agent
+        self.next_channel_id = 1
+        self.exchange = agent.exchange
+        self.routing_pattern = agent.resource_name
+
+
+
+    def createConsumer(self, key, handler):
+        """
+        should handler be passed in and published to when messages come in,
+        or should the deferred queue be returned so the caller can decide
+        when to get from it?  
+        """
+
+        channel_num = self.next_channel_id 
+        self.next_channel_id += 1
+        channel = yield self.connection.channel(channel_num)
+        yield channel.channel_open()
+        # need to move this to configuration service
+        yield channel.exchange_declare(exchange=self.exchange, type="topic")
+        reply = yield channel.queue_declare(auto_delete=True)
+        yield channel.queue_bind(queue=reply.queue,
+                                exchange=self.exchange,
+                                routing_key=self.routing_pattern)
+
+        consumer_tag = str(uuid.uuid4())
+        yield channel.basic_consume(queue=reply.queue, consumer_tag=consumer_tag)
+        chQueue = yield self.connection.queue(consumer_tag)
+
+
+    def consume_basic_deliver(self, amqp_message):
+        """
+        receive messages of basic_deliver method
+        """
+        agent_message = amqp_message.content.body
+
+
+
+
+class Buffer:
+    """An active DeferredQueue.
+    Instead of using get for each object in the queue, 
+    
+    """
+
+
+
+
+
