@@ -147,6 +147,16 @@ class CacheTest(unittest.TestCase):
             pass
 
     @inlineCallbacks
+    def test_bad_hostname(self):
+        """Force a DNS error"""
+        host = 'nonlocalhost'
+        try:
+            yield self.go(hostName=host)
+            self.fail('Should have a DNS exception here!')
+        except Exception:
+            logging.debug('OK, exception on bad hostname')
+
+    @inlineCallbacks
     def test_cache_listing(self):
         """Try simple list-all"""
         host = 'localhost'
