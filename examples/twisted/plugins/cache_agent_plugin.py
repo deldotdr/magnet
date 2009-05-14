@@ -32,7 +32,7 @@ class Wallet(pole.BasePole):
     ##########################
     # Magnet actions
     def action_dset_query(self, msg):
-        """Query - is a dataset (or redis regex) in the cache?"""
+        """Query - is a dataset (or rdedis regex) in the cache?"""
         # TODO: Move this to DF Agent?
         dsetName = msg['payload']
         logging.info('Got query for "%s"' % dsetName)

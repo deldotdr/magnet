@@ -14,7 +14,9 @@ import magnet
 from magnet import field, pole
 import os
 from twisted.internet import reactor, threads
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, Deferred, maybeDeferred
+from twisted.internet import defer
+from twisted.internet.task import LoopingCall
 from twisted.internet.error import DNSLookupError, UserError
 from twisted.trial import unittest
 from twisted.internet.base import DelayedCall
@@ -34,7 +36,7 @@ class CacheClient(pole.BasePole):
         self.got_reply = True
 
     def waitForReply(self):
-        """Waits for reply or a 10 sec timeout.
+        """Waits for reply or a 5 sec timeout.
         Synchronous, run in another thread."""
         st = time.time()
         while ((time.time() - st) < 5) and (self.got_reply == False):
@@ -49,16 +51,46 @@ class CacheClient(pole.BasePole):
         msg['payload'] = payload
         msg['return_code'] = str(returnCode)
         return msg
-
+        
     def sendMsg(self, msg, key):
         """Convenience method - clear reply flag before sending"""
         self.got_reply = False
         self.reply = ''
-        return self.sendMessage(msg, key)
+        logging.debug('Sending message')
+        return maybeDeferred(self.sendMessage, msg, key)
+
+    def sendRcv(self, msg, key):
+        """Uses loopingCall to create a RPC pattern, returns a deferred"""
+        def checkTimeout(endTime):
+            """This is to be run as a looping call"""
+            logging.debug('Checking timeout')
+            if time.time() >= endTime:
+                if not self.got_reply:
+                    logging.info("Receive timed out, firing errback")
+                    raise Exception('Timeout')
+            if self.got_reply:
+                logging.debug("Receive succeeded")
+                self.lc.stop()
+                return self.reply
+            logging.debug('Not timeout, no message yet')    
+            
+        def runLCall(args):
+            """Convenience inner routine to setup and run the loopingCall"""
+            # Expect a response in 2 seconds or less
+            endTime = time.time() + 2.0
+            logging.debug("Starting looping call")
+            self.lc = LoopingCall(checkTimeout, endTime)
+            # Start it running, returns a deferred
+            d = self.lc.start(0.1)
+            return d
+
+        # Chain looping call to run once send returns
+        d = self.sendMsg(msg, key).addCallback(runLCall)
+        return d        
 
 class CacheTest(unittest.TestCase):
     def setUp(self):
-        logging.basicConfig(level=logging.INFO, \
+        logging.basicConfig(level=logging.WARNING, \
                 format='%(asctime)s %(levelname)s [%(funcName)s] %(message)s')
 
         # Set a timeout for login failures and similar
@@ -86,6 +118,43 @@ class CacheTest(unittest.TestCase):
         return d
 
     @inlineCallbacks
+    def test_send_receive(self):
+        """Try new looping call"""
+        host = 'localhost'
+        yield self.go(hostName=host)
+        
+        logging.debug('Connected to exchange OK')
+
+        # Try a dataset query
+        logging.debug('Listing all datasets')
+        cmd = self.cc.makeMsg('dset_query', '*')
+        d =  self.cc.sendRcv(cmd, 'dataset').addErrback(self.fail)
+        d.addCallback(logging.debug)
+        yield d
+        if self.cc.got_reply == True:
+            # May be empty, so just roll with it
+            pass
+        else:
+            logging.error('No reply from Wallet!')
+            self.fail('Wallet timeout')
+        
+    @inlineCallbacks
+    def test_bad_routing_key(self):
+        """Force a timeout"""
+        host = 'localhost'
+        yield self.go(hostName=host)
+        
+        # Test sending to wrong routing key
+        try:
+            # Note that callback, if fired, will fail the test
+            d = self.cc.sendRcv(cmd, 'Not-dataset').addCallback(lambda _: self.fail)
+            yield d
+            self.fail('Expected an error on non-existent routing key')
+        except Exception:
+            logging.debug('OK, exception as expected on bogus routing key')
+            pass
+
+    @inlineCallbacks
     def test_cache_listing(self):
         """Try simple list-all"""
         host = 'localhost'
@@ -95,8 +164,9 @@ class CacheTest(unittest.TestCase):
 
         logging.debug('Listing all datasets')
         cmd = self.cc.makeMsg('dset_query', '*')
-        yield self.cc.sendMsg(cmd, 'dataset')
-        yield threads.deferToThread(self.cc.waitForReply)
+        d=  self.cc.sendRcv(cmd, 'dataset').addErrback(self.fail)
+        d.addCallback(logging.debug)
+        yield d
         if self.cc.got_reply == True:
             # May be empty, so just roll with it
             pass
