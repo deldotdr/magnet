@@ -35,13 +35,6 @@ class CacheClient(pole.BasePole):
         self.reply = msg['payload']
         self.got_reply = True
 
-    def waitForReply(self):
-        """Waits for reply or a 5 sec timeout.
-        Synchronous, run in another thread."""
-        st = time.time()
-        while ((time.time() - st) < 5) and (self.got_reply == False):
-            time.sleep(0.1)
-
     #######
     # internal methods
     def makeMsg(self, method, payload, returnCode=200):
@@ -51,13 +44,7 @@ class CacheClient(pole.BasePole):
         msg['payload'] = payload
         msg['return_code'] = str(returnCode)
         return msg
-        
-    def sendMsg(self, msg, key):
-        """Convenience method - clear reply flag before sending"""
-        self.got_reply = False
-        self.reply = ''
-        logging.debug('Sending message')
-        return maybeDeferred(self.sendMessage, msg, key)
+
 
     def sendRcv(self, msg, key):
         """Uses loopingCall to create a RPC pattern, returns a deferred"""
@@ -72,21 +59,26 @@ class CacheClient(pole.BasePole):
                 logging.debug("Receive succeeded")
                 self.lc.stop()
                 return self.reply
-            logging.debug('Not timeout, no message yet')    
-            
-        def runLCall(args):
+            logging.debug('Not timeout, no message yet')
+
+        def runLoopingCall(timeout):
             """Convenience inner routine to setup and run the loopingCall"""
             # Expect a response in 2 seconds or less
-            endTime = time.time() + 2.0
+            endTime = time.time() + timeout
             logging.debug("Starting looping call")
             self.lc = LoopingCall(checkTimeout, endTime)
             # Start it running, returns a deferred
             d = self.lc.start(0.1)
             return d
 
-        # Chain looping call to run once send returns
-        d = self.sendMsg(msg, key).addCallback(runLCall)
-        return d        
+        # Clear flags and payload, dispatch message then start loop up
+        self.got_reply = False
+        self.reply = ''
+        logging.debug('Sending message')
+        self.sendMessage(msg, key)
+
+        d = runLoopingCall(3.0)
+        return d
 
 class CacheTest(unittest.TestCase):
     def setUp(self):
@@ -122,7 +114,7 @@ class CacheTest(unittest.TestCase):
         """Try new looping call"""
         host = 'localhost'
         yield self.go(hostName=host)
-        
+
         logging.debug('Connected to exchange OK')
 
         # Try a dataset query
@@ -137,13 +129,13 @@ class CacheTest(unittest.TestCase):
         else:
             logging.error('No reply from Wallet!')
             self.fail('Wallet timeout')
-        
+
     @inlineCallbacks
     def test_bad_routing_key(self):
         """Force a timeout"""
         host = 'localhost'
         yield self.go(hostName=host)
-        
+
         # Test sending to wrong routing key
         try:
             # Note that callback, if fired, will fail the test
@@ -176,32 +168,30 @@ class CacheTest(unittest.TestCase):
 
     @inlineCallbacks
     def test_cache_lifecycle(self):
-        """Try simple download/query/purge from local DAP server"""
+        """Try full cycle of download/query/purge/verify from local DAP server"""
         host = 'localhost'
         dset = 'http://localhost:8080/sample.csv'
         yield self.go(hostName=host)
         logging.debug('Connected to amoeba OK')
 
+        # As to have dataset cached
         cmd = self.cc.makeMsg('dset_fetch', dset)
-        yield self.cc.sendMsg(cmd, 'dataset')
-
-        yield threads.deferToThread(self.cc.waitForReply)
+        d =  self.cc.sendRcv(cmd, 'dataset').addErrback(self.fail)
+        d.addCallback(logging.debug)
+        yield d
         if self.cc.got_reply == True:
             logging.debug('Dataset cached successfully')
         else:
             logging.error('No reply from Wallet!')
-            self.fail()
+            self.fail('Wallet timeout')
 
         # Verify presence in directory
         cmd = self.cc.makeMsg('dset_query', dset)
-        yield self.cc.sendMsg(cmd, 'dataset')
-
-        yield threads.deferToThread(self.cc.waitForReply)
+        d =  self.cc.sendRcv(cmd, 'dataset').addErrback(self.fail)
+        d.addCallback(logging.debug)
+        yield d
         if self.cc.got_reply == True:
-            if self.cc.rc == 200:
-                logging.debug('Dataset queried successfully')
-            else:
-                self.fail('Query after fetch failed')
+            logging.debug('Dataset queried successfully')
         else:
             logging.error('No reply from Wallet!')
             self.fail('Wallet timeout')
@@ -209,19 +199,21 @@ class CacheTest(unittest.TestCase):
         # Remove it
         logging.debug('Purging downloaded dataset')
         cmd = self.cc.makeMsg('dset_purge', dset)
-        yield self.cc.sendMsg(cmd, 'dataset')
-        yield threads.deferToThread(self.cc.waitForReply)
+        d =  self.cc.sendRcv(cmd, 'dataset').addErrback(self.fail)
+        d.addCallback(logging.debug)
+        yield d
         if self.cc.got_reply == True:
             self.failUnlessEqual(200, self.cc.rc)
         else:
             logging.error('No reply from Wallet!')
-            self.fail()
+            self.fail('Wallet timeout')
 
         # Verify that purge succeeded
         logging.debug('verifying purge')
         cmd = self.cc.makeMsg('dset_query', dset)
-        yield self.cc.sendMsg(cmd, 'dataset')
-        yield threads.deferToThread(self.cc.waitForReply)
+        d =  self.cc.sendRcv(cmd, 'dataset').addErrback(self.fail)
+        d.addCallback(logging.debug)
+        yield d
         if self.cc.got_reply == True:
             self.failUnlessEqual(404, self.cc.rc)
         else:
