@@ -266,7 +266,6 @@ class AMQPClientFromPoleService(object):
         # message_object = particle.unserialize_application_message(amqp_message.content.body)
         message_object = amqp_message.content.properties['headers']
         message_object['payload'] = amqp_message.content.body
-        print(message_object['payload'])
 
         response_message = yield self.service.handleMessage(message_object)
 
