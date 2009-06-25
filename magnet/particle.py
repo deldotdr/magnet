@@ -1,6 +1,7 @@
 """
 Message formats
 
+Messages are encoded (for now) as JSON; on the plan is a move to native AMQP binary types.
 """
 
 import simplejson as json

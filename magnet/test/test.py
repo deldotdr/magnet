@@ -35,7 +35,7 @@ class NIBTest(unittest.TestCase):
         except:
             pass
 
-    def go(self, hostName='amoeba.ucsd.edu'):
+    def go(self, hostName='localhost'):
         # Create the instance
         self.nib = NIB()
         # Adapt it to AMQP
@@ -51,7 +51,7 @@ class NIBTest(unittest.TestCase):
     @inlineCallbacks
     def test_pingPong(self):
         """Send and receive basic messages using Magnet"""
-        yield self.go(hostName='amoeba.ucsd.edu')
+        yield self.go()
         # Send/receive 10 times
         for x in range(1,11):
             yield self.nib.pingPong()

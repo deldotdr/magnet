@@ -36,17 +36,17 @@ from magnet import particle
 
 class AMQPConnector(service.Service):
     """Field Service Connector.
-    This connector is used to keep the pole service 
+    This connector is used to keep the pole service
     from having to know anything about the transport connection.
-    
+
     This special connector is needed to login to the broker (normally
     TCPClient would be used).
 
     This is a hack to make amqp work with the application framework.
     """
 
-    def __init__(self, channel_manager, host='localhost', port=5672, 
-                        username='guest', password='guest', 
+    def __init__(self, channel_manager, host='localhost', port=5672,
+                        username='guest', password='guest',
                         vhost='/', spec_path='.'):
         self.channel_manager = channel_manager
         self.host = host
@@ -193,7 +193,8 @@ class AMQPClientFromPoleService(object):
         channel_num = 1
         channel = yield self.client.channel(channel_num)
         yield channel.channel_open()
-        # yield channel.exchange_declare(exchange=self.exchange, type="topic")
+        # pfh 6/11/09 declare was commented out...
+        yield channel.exchange_declare(exchange=self.exchange, type="topic")
         yield channel.channel_close(reply_code=200, reply_text="Ok")
         # yield self.startDirectConsumer()
         yield self.startTopicConsumer()
@@ -464,7 +465,7 @@ class ChannelManagementLayer(object):
                                     agent.exchange, agent.resource_name,
                                     unique_id=agent.unique_id)
         agent_chan = ChannelWrapper(channel, incoming_queue)
-        agent.activateAgent(agent_chan) 
+        agent.activateAgent(agent_chan)
 
     def stopAgent(self, name):
         self.agents.get(name).stopAgent()
@@ -472,7 +473,7 @@ class ChannelManagementLayer(object):
     @defer.inlineCallbacks
     def _new_consuming_channel(self, exchange, routing_key, unique_id=None):
         log.msg('new consumer channel')
-        channel_num = self.next_channel_id 
+        channel_num = self.next_channel_id
         self.next_channel_id += 1
         channel = yield self.connection.channel(channel_num)
         yield channel.channel_open()
@@ -516,10 +517,10 @@ class AMQPClientFromAgent:
         """
         should handler be passed in and published to when messages come in,
         or should the deferred queue be returned so the caller can decide
-        when to get from it?  
+        when to get from it?
         """
 
-        channel_num = self.next_channel_id 
+        channel_num = self.next_channel_id
         self.next_channel_id += 1
         channel = yield self.connection.channel(channel_num)
         yield channel.channel_open()
@@ -546,11 +547,6 @@ class AMQPClientFromAgent:
 
 class Buffer:
     """An active DeferredQueue.
-    Instead of using get for each object in the queue, 
-    
+    Instead of using get for each object in the queue,
+
     """
-
-
-
-
-

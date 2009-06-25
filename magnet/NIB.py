@@ -2,7 +2,7 @@
 
 __author__='hubbard'
 __date__ ='$Apr 27, 2009 10:15:30 AM$'
-
+"""TODO: Replace deferToThread code with better loopingCall routines in test_cache.py"""
 
 from twisted.internet.defer import inlineCallbacks, Deferred
 from twisted.internet import protocol, reactor, threads
@@ -21,7 +21,7 @@ class MyError(Exception):
 
 class NIB(pole.BasePole):
     """NIB is a type of magnet (http://en.wikipedia.org/wiki/Neodymium_magnet) and NIB.py
-       is the pair class file for test.py, providing scaffolding that the test uses.
+       is the pair class file for test.py and test_cache.py, providing scaffolding that the test uses.
 
        See pingPong method.
        """
@@ -77,7 +77,7 @@ class NIB(pole.BasePole):
 
     def loopingDoneCheck(self):
         d = Deferred()
-        
+
 
     def pingPong(self, msg='hi world'):
         """Does a ping/ack loop, via callbacks. Messages are sent and received,

@@ -93,7 +93,7 @@ class Wallet(pole.BasePole):
     def dataset_query(self, dsetRegex):
         """Query dataset(s) status from Redis directory"""
         logging.info('Query for dataset regex "%s"' % dsetRegex)
-        kvs = redis.Redis(host='amoeba.ucsd.edu')
+        kvs = redis.Redis(host='localhost')
         foo = kvs.keys('%s%s' % (self.kvsPrefix(), dsetRegex))
         kvs.disconnect()
         return foo
@@ -101,7 +101,7 @@ class Wallet(pole.BasePole):
     def dataset_update(self, dsetName, localName):
         """Add dataset to Redis post-download"""
         logging.info('Updating redis with dataset "%s":%s' % (dsetName, localName))
-        kvs = redis.Redis(host='amoeba.ucsd.edu')
+        kvs = redis.Redis(host='localhost')
 
         # Key is original name, value is local name
         kvs.set('%s%s' % (self.kvsPrefix(), dsetName), localName)
@@ -111,7 +111,7 @@ class Wallet(pole.BasePole):
         """Purge a dataset from cache and directory"""
         logging.info('Purging dataset "%s"' % dsetName)
 
-        kvs = redis.Redis(host='amoeba.ucsd.edu')
+        kvs = redis.Redis(host='localhost')
         localName = kvs.get('%s%s' % (self.kvsPrefix(), dsetName))
         if localName == None:
             logging.warning('Dataset not found in Redis')
@@ -125,7 +125,7 @@ class Wallet(pole.BasePole):
                 rc = 501
         except OSError:
             rc = 501
-            
+
         # Delete from redis even if couldn't delete from disk...skew error
         kvs.delete('%s%s' % (self.kvsPrefix(), dsetName))
         kvs.disconnect()
