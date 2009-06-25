@@ -193,7 +193,7 @@ class AMQPClientFromPoleService(object):
         channel_num = 1
         channel = yield self.client.channel(channel_num)
         yield channel.channel_open()
-        # yield channel.exchange_declare(exchange=self.exchange, type="topic")
+        yield channel.exchange_declare(exchange=self.exchange, type="topic")
         yield channel.channel_close(reply_code=200, reply_text="Ok")
         # yield self.startDirectConsumer()
         yield self.startTopicConsumer()
@@ -226,7 +226,7 @@ class AMQPClientFromPoleService(object):
         channel_num = 2
         channel = yield self.client.channel(channel_num)
         yield channel.channel_open()
-        # yield channel.exchange_declare(exchange=self.exchange, type="topic")
+        yield channel.exchange_declare(exchange=self.exchange, type="topic")
         reply = yield channel.queue_declare(auto_delete=True)
         yield channel.queue_bind(queue=reply.queue,
                                 exchange=self.exchange,
@@ -251,8 +251,8 @@ class AMQPClientFromPoleService(object):
         Now, assume anything in message_object named payload is a string
         """
         # serialized_message = particle.serialize_application_message(message_object)
-        payload = message_object.pop('payload', '')
-        msg_props = {'application_headers':message_object}
+        payload = message_object.pop('payload', 'nada')
+        msg_props = {'headers':message_object}
         msg_content = content.Content(payload, properties=msg_props)
         self.send_channel.basic_publish(exchange=self.exchange,
                                         routing_key=routing_key,
@@ -264,8 +264,9 @@ class AMQPClientFromPoleService(object):
         Use particle for message serialization/de-serialization.
         """
         # message_object = particle.unserialize_application_message(amqp_message.content.body)
-        message_object = amqp_message.content.properties['application_headers']
+        message_object = amqp_message.content.properties['headers']
         message_object['payload'] = amqp_message.content.body
+        print(message_object['payload'])
 
         response_message = yield self.service.handleMessage(message_object)
 
