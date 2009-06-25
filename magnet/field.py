@@ -246,19 +246,26 @@ class AMQPClientFromPoleService(object):
         self.channels.append(channel)
         self.send_channel = channel
 
-    def sendMessage(self, message_object, routing_key):
-        serialized_message = particle.serialize_application_message(message_object)
-        mess_content = content.Content(serialized_message)
+    def sendMessage(self, message_object, routing_key, payload=''):
+        """the kw payload is here to for future design.
+        Now, assume anything in message_object named payload is a string
+        """
+        # serialized_message = particle.serialize_application_message(message_object)
+        payload = message_object.pop('payload', '')
+        msg_props = {'application_headers':message_object}
+        msg_content = content.Content(payload, properties=msg_props)
         self.send_channel.basic_publish(exchange=self.exchange,
                                         routing_key=routing_key,
-                                        content=mess_content)
+                                        content=msg_content)
 
     @defer.inlineCallbacks
     def handleMessage(self, amqp_message, channel, channel_num, queue):
         """
         Use particle for message serialization/de-serialization.
         """
-        message_object = particle.unserialize_application_message(amqp_message.content.body)
+        # message_object = particle.unserialize_application_message(amqp_message.content.body)
+        message_object = amqp_message.content.properties['application_headers']
+        message_object['payload'] = amqp_message.content.body
 
         response_message = yield self.service.handleMessage(message_object)
 
