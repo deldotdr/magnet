@@ -155,7 +155,8 @@ class SendOne(BasePole):
         message_object = {'method':self.send_command, 
                         'role':'Control',
                         'payload':role_message}
-        self.sendMessage(message_object, self.send_routing_key)
+        # self.sendMessage(message_object, self.send_routing_key)
+        self.sendMessage(role_message, self.send_routing_key)
 
 
 class MultiPole(BasePole):
