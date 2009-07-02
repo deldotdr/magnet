@@ -1,88 +1,65 @@
+Misted
 ======
-Magnet 
-======
-April 2, 2009
+OOI Iteration 3
+June, 2009
 
-Interacting message agents.
+Misted is a play on the word Twisted. I was misted by Twisted (confused),
+and the M also stands for messaging.
 
+This project is an experiment. The goal is to use an AMQP connection as the
+facility supporting a Transport service by implementing the necessary
+twisted.internet interfaces.
 
+The usage would look like this:
+-------------------------------
 
-Pole - Application messages
----------------------------
-Poles are Twisted services that know how to handle messages passed carried
-within the Transport Protocols content payload. 
+Client Pattern:
 
-Poles realize the intent/purpose/request carried within the Application
-message.
+fog.connectMS(address, factory, message_service)
 
-A Pole is a collection of methods/functions that execute specific actions.
-Actions can be anything. 
+Server Pattern:
 
-
-Field - Transport messages
---------------------------
-Magnet supports AMQP version 0-8.
-
-The AMQP specification defines several exchange types and a range of
-message queue configuration options. 
+fog.listenMS(address, factory, message_service)
 
 
-Particle - Message format and serialization
--------------------------------------------
+Compare that to twisted's 
+
+reactor.connectTCP(host, port, factory)
+
+reactor.listenTCP(port, factory, bind_address)
 
 
-Usage
-=====
-Magnet can be used as a twistd plugin:
-
-$ twistd magnet --help
-Usage: twistd [options] magnet [options]
-Options:
-  -h, --host=       Broker Host [default: localhost]
-      --port=       Broker Port [default: 5672]
-  -u, --username=   Broker username [default: guest]
-  -p, --password=   Broker password [default: guest]
-      --vhost=      Broker vhost [default: /]
-      --spec_path=  Path to AMQP spec file [default:]
-      --version     
-      --help        Display this help and exit.
-      --plugins     
-
-Create a simple actor (look for this in the examples dir).
-cd into the examples dir (you should see a dir called twisted).
-Run the say actor by doing:
-twistd -n magnet 
-
-Magnet will automatically find say with in twisted/plugins/say_agent.py
-
-Simple Producer
----------------
-
-twistd -n magnet send -c say -r test --payload='ohi, wrld'
+In both cases, factory is *anything* that implements
+twisted.internet.interfaces.IProtocolFactory! (awesome!)
 
 
-Notes:
-------
-Message factories. 
-Given a message protocol/format/..., create instances of message handlers
-or create a parameterized message object ready for placement into the
-transport message body/content.
+File explanations (sorry about the silly names):
+------------------------------------------------
+The fog.py file is based on twisted.internet.tcp. The classes here are
+fulfilling well known twisted interfaces and concepts.
+
+The river.py file is an attempt to abstract AMQP such that
+MistedConnections treat amqp channels the same (or close to the same) way
+that tcp.Connection (and related classes) use the socket. The classes in
+this file are the hard part. The desired effect is that
+fog.MistedConnection would be able to use some abstraction of amqp to
+send/receive data in a way resembling the socket.
+
+The amqp.py file provides a AMQPClientCreator in proper Twisted style. This
+is actually the cleanest job of this I have seen, and should be put into
+Magnet.
 
 
-INSTALLATION
-============
 
-Dependencies
-------------
-Python - http://python.org  (Comes with in OSX and Linux)
-Twisted - http://twistedmatrix.com/trac/ (Comes with OSX)
-txAMQP - https://launchpad.net/txamqp/+download
+Requires:
+---------
+Twisted
+txAMQP
 
-AMQP Broker
+
+Test Cases:
 -----------
-RabbitMQ is the only tested and supported broker (spec version amqp0-8).
-
-http://www.rabbitmq.com/download.html
-
+dtest.py - Test use of Client pattern
+dservertet.py - Test use of Server pattern 
 
 
