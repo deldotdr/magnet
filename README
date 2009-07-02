@@ -10,8 +10,8 @@ This project is an experiment. The goal is to use an AMQP connection as the
 facility supporting a Transport service by implementing the necessary
 twisted.internet interfaces.
 
-The usage would look like this:
--------------------------------
+The usage looks like this:
+--------------------------
 
 Client Pattern:
 
@@ -31,6 +31,9 @@ reactor.listenTCP(port, factory, bind_address)
 
 In both cases, factory is *anything* that implements
 twisted.internet.interfaces.IProtocolFactory! (awesome!)
+
+messaging_service is a running AMQP client. This has to be setup before
+using fog.listenMS or fog.connectMS.
 
 
 File explanations (sorry about the silly names):
