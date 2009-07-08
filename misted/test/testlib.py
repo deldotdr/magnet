@@ -111,8 +111,9 @@ class TestBase(unittest.TestCase):
         self.exchanges = []
         self.connectors = []
         # self.client = yield self.connect()
-        clientCreator = AMQPClientCreator(reactor, MessageService)
+        clientCreator = AMQPClientCreator(reactor)# , MessageService)
         self.client = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
+        self.connectors.append(clientCreator.connector)
         yield self.client.authenticate(clientCreator.username,
                 clientCreator.password)
 
