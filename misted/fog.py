@@ -47,6 +47,10 @@ class AbstractPocket(log.Logger, styles.Ephemeral, object):
     def loseConnection(self):
         """
         """
+        if self.connected and not self.disconnecting:
+            self.stopReading()
+            self.stopWriting()
+
 
     def connectionLost(self, reason):
         """
@@ -108,7 +112,6 @@ class Connection(AbstractPocket):
         protocol.dataReceived
         """
         data = self.pocket.recv()
-        print 'Connction doRead', self, data
         self.protocol.dataReceived(data)
 
 
@@ -172,9 +175,7 @@ class BaseClient(Connection):
         socket to a host
         """
         status = yield self.pocket.connect(self.realAddress)
-        print 'doConn', status
         self._connectionDone()
-        print 'after condone'
         defer.returnValue(None)
 
     def _connectionDone(self):

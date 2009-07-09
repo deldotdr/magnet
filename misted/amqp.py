@@ -46,14 +46,10 @@ class PocketDelegate(TwistedDelegate):
 
         XXX plan for handling syconicity of buffering and reading messages.
         """
-        print 'basic_deliver', ch, msg
         if msg.content.properties['type'] == 'control':
-            print 'control deliver'
             ch.deliver_queue.put(msg)
         else:
-            print 'not control deliver'
             ch._basic_deliver_buffer.append(msg)
-            print 'channel basic deliver buffer', ch._basic_deliver_buffer
 
 
 

@@ -2,6 +2,7 @@
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet import protocol
+from twisted.protocols import basic
 
 from twisted.web.client import HTTPClientFactory
 from twisted.web import server, proxy
@@ -12,6 +13,23 @@ from misted.hot_pocket import PocketDynamo
 
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672
+
+class UtilClient(basic.LineReceiver):
+
+    def connectionMade(self):
+        send = 'add, 2, 3'
+        # send = 'whois'
+        print 'send: ', send
+        self.sendLine(send)
+
+    def lineReceived(self, line):
+        print 'Result: ', line
+        if line[0:3] == 'add' and int(line[3:]) < 20:
+            send = 'add, 2,'+line[3:]
+            self.sendLine(send)
+
+class UtilClientFactory(protocol.ClientFactory):
+    protocol = UtilClient
 
 class MSClient(protocol.Protocol):
 
@@ -35,7 +53,8 @@ def main(reactor):
 
     dynamo = PocketDynamo(reactor, client)
     # f = HTTPClientFactory('http://amoeba.ucsd.edu')
-    f = MSClientFactory()
+    # f = MSClientFactory()
+    f = UtilClientFactory()
     c = dynamo.connectMS('test-http-server', f)
     dynamo.run()
 

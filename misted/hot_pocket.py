@@ -171,7 +171,6 @@ class _AMQPChannelConfig(object):
         Content class, and return payload
         """
         amqp_msg = self.channel._basic_deliver_buffer.pop()
-        print '_recv', amqp_msg.content.body
         return amqp_msg.content.body
     
     def _close(self):
@@ -254,9 +253,7 @@ class _PocketObject(_AMQPChannelConfig):
         """
         # peer_addr should be resolved already (arrive resolved in connect
         # message)
-        print 'pre accept'
         peer_addr = self._accept()
-        print 'accepted', peer_addr
         pkt = self.dynamo.pocket()
         yield pkt._bind_and_connect_from_accept(peer_addr)
         defer.returnValue((pkt, peer_addr))
@@ -483,13 +480,11 @@ class PocketDynamo(DynamoCore):
     def addReader(self, reader):
         """
         """
-        print 'addReader', reader
         self._readers[reader] = 1
 
     def addWriter(self, writer):
         """
         """
-        print 'addWriter', writer
         self._writers[writer] = 1
 
     def removeReader(self, reader):
