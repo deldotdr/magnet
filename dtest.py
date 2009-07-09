@@ -1,27 +1,43 @@
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
+from twisted.internet import protocol
 
 from twisted.web.client import HTTPClientFactory
 from twisted.web import server, proxy
 
 from misted.amqp import AMQPClientCreator
-from misted.river import MessageService
 from misted import fog
+from misted.hot_pocket import PocketDynamo
 
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672
 
+class MSClient(protocol.Protocol):
+
+    def dataReceived(self, data):
+        print 'dataReceived', data
+        self.transport.write("Im gonna close the connection now, BYE!")
+        self.transport.loseConnection()
+
+    def connectionMade(self):
+        self.transport.write('HOLA, World on a wing!')
+
+class MSClientFactory(protocol.ClientFactory):
+    protocol = MSClient
+
 @inlineCallbacks
 def main(reactor):
-    clientCreator = AMQPClientCreator(reactor, MessageService)
-    msgsrv = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
-    yield msgsrv.authenticate(clientCreator.username,
+    clientCreator = AMQPClientCreator(reactor)
+    client = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
+    yield client.authenticate(clientCreator.username,
             clientCreator.password)
 
-    f = HTTPClientFactory('http://google.com')
-    c = fog.connectMS('test-http-server', f, timeout=None, from_addr='test-adapter',
-        reactor=reactor, msgsrv=msgsrv)
+    dynamo = PocketDynamo(reactor, client)
+    # f = HTTPClientFactory('http://amoeba.ucsd.edu')
+    f = MSClientFactory()
+    c = dynamo.connectMS('test-http-server', f)
+    dynamo.run()
 
 
 

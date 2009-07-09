@@ -30,7 +30,7 @@ class AbstractPocket(log.Logger, styles.Ephemeral, object):
 
     def __init__(self, reactor, dynamo):
         self.reactor = reactor
-        self.dynamo = dynamo
+        # self.dynamo = dynamo
 
     def write(self, data):
         """
@@ -52,6 +52,20 @@ class AbstractPocket(log.Logger, styles.Ephemeral, object):
         """
         """
 
+    def startReading(self):
+        """
+        """
+        self.dynamo.addReader(self)
+
+    def startWriting(self):
+        self.dynamo.addWriter(self)
+
+    def stopReading(self):
+        self.dynamo.removeReader(self)
+
+    def stopWriting(self):
+        self.dynamo.removeWriter(self)
+
 class Connection(AbstractPocket):
     """Messaging Service Connection.
     Connections wrap around the "physical" lower level part of the network.
@@ -68,7 +82,7 @@ class Connection(AbstractPocket):
     # implements(interfaces.ITransport)
 
 
-    def __init__(self, pkt, protocol, reactor=None):
+    def __init__(self, pkt, protocol, reactor, dynamo):
         """
         """
         AbstractPocket.__init__(self, reactor, dynamo)
@@ -94,14 +108,9 @@ class Connection(AbstractPocket):
         protocol.dataReceived
         """
         data = self.pocket.recv()
+        print 'Connction doRead', self, data
         self.protocol.dataReceived(data)
 
-
-    def startReading(self):
-        """
-        this has to do with making sure the deliver queue is read
-        should it be defined here or in AbstractMessageChannel?
-        """
 
     def connectionLost(self, reason):
         """
@@ -126,7 +135,7 @@ class BaseClient(Connection):
         Because it get's set during the doConnect call
         """
         if whenDone:
-            Connection.__init__(self, pkt, None, reactor)
+            Connection.__init__(self, pkt, None, reactor, dynamo)
             reactor.callLater(0, whenDone)
         else:
             # reactor.callLater(0, self.failIfNotConnected, error)
@@ -140,17 +149,19 @@ class BaseClient(Connection):
         pkt = self.dynamo.pocket()
         return pkt
 
+    @defer.inlineCallbacks
     def resolveAddress(self):
         """
         set self.realAddress
         this is passed as addr to the protocol buildProtocol(addr)
         """
-        print 'resolveAddress'
+        yield self.pocket.bind(self.bindAddress)
         self._setRealAddress(self.addr) 
+        yield self.doConnect()
 
     def _setRealAddress(self, address):
-        self.realAddress = address
-        self.doConnect()
+        self.realAddress = ['amq.direct',address]
+        # yield self.doConnect()
 
     @defer.inlineCallbacks
     def doConnect(self):
@@ -160,10 +171,13 @@ class BaseClient(Connection):
         this is where mschan is configured; the analog to connecting a
         socket to a host
         """
-        yield self.pkt.connect(self.realAddress)
+        status = yield self.pocket.connect(self.realAddress)
+        print 'doConn', status
         self._connectionDone()
+        print 'after condone'
+        defer.returnValue(None)
 
-    def _connectionDone(self)
+    def _connectionDone(self):
         self.protocol = self.connector.buildProtocol(None)
         self.logstr = self.protocol.__class__.__name__ + ', client'
         self.startReading()
@@ -184,21 +198,21 @@ class Client(BaseClient):
     implements address getting of ITransport
     """
 
-    def __init__(self, addr, bindAddress, connector, reactor=None, dynamo=None):
+    def __init__(self, addr, bindAddress, connector, reactor, dynamo):
         """
-        XXX reactor = dynamo ?
 
         """
         self.addr = addr
         self.bindAddress = bindAddress
         self.connector = connector
+        self.dynamo = dynamo
         # try:
         pkt = self.createMessagingPocket()
 
         whenDone = self.resolveAddress # this thing figures out the real
                                         # amqp address to talk to
         # Connections must always call bind. Pocket will handle None address
-        pkt.bind(bindAddress)
+        # pkt.bind(bindAddress)
 
         # Need to create Pocket errors/exceptions
         err = None
@@ -226,6 +240,7 @@ class Server(Connection):
         self.client_address = client_address # ?
         self.sessionno = sessionno # ?
         self.address = client_address# [0] # ?
+        self.dynamo = dynamo
 
         self.startReading() # a Connection responsability
         self.connected = 1
@@ -268,6 +283,7 @@ class ListeningPort(BaseListeningPort):
         self.factory = factory
         self.backlog = backlog
         self.interface = interface
+        self.dynamo = dynamo
 
 
     @defer.inlineCallbacks
@@ -276,7 +292,7 @@ class ListeningPort(BaseListeningPort):
         configuration of mschan
         """
         pkt = self.createMessagingPocket()
-        pkt.bind(self.listen_address)
+        yield pkt.bind(self.listen_address)
 
         # self._realPortNumber ?
         self.factory.doStart()
@@ -285,13 +301,16 @@ class ListeningPort(BaseListeningPort):
         self.pocket = pkt
         self.startReading()
 
+    @defer.inlineCallbacks
     def doRead(self):
         """
         XXX skipping error checks, max accepts, etc.
         """
         # try #  implement handeling errors for bad connection requests
-        pkt, addr = self.pocket.accept()
+        print 'listen doRead'
+        pkt, addr = yield self.pocket.accept()
         protocol = self.factory.buildProtocol(addr)
+        print 'protocol server made', protocol
         s = self.sessionno
         self.sessionno = s + 1
         # should self.mschan really go in here?
@@ -324,7 +343,7 @@ class Connector(base.BaseConnector):
         base.BaseConnector.__init__(self, factory, timeout, reactor)
 
     def _makeTransport(self):
-        return Client(self.addr, self.bindAddress, self, reactor, self.dynamo)
+        return Client(self.addr, self.bindAddress, self, self.reactor, self.dynamo)
 
     def getDestination(self):
         """

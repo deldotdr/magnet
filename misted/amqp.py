@@ -22,6 +22,7 @@ class Channel(AMQChannel):
     def __init__(self, id, outgoing):
         AMQChannel.__init__(self, id, outgoing)
         self.deliver_queue = TimeoutDeferredQueue()
+        self._basic_deliver_buffer = []
 
 class PocketDelegate(TwistedDelegate):
     """TwistedDelegate is a little frameworkish thing utilized by txAMQP
@@ -45,10 +46,14 @@ class PocketDelegate(TwistedDelegate):
 
         XXX plan for handling syconicity of buffering and reading messages.
         """
+        print 'basic_deliver', ch, msg
         if msg.content.properties['type'] == 'control':
+            print 'control deliver'
             ch.deliver_queue.put(msg)
         else:
+            print 'not control deliver'
             ch._basic_deliver_buffer.append(msg)
+            print 'channel basic deliver buffer', ch._basic_deliver_buffer
 
 
 
@@ -69,7 +74,8 @@ class AMQPProtocol(AMQClient):
                buffer(list)
         """
         if id is None:
-            id = self.next_channel_id += 1
+            self.next_channel_id += 1
+            id = self.next_channel_id
         try:
             ch = self.channels[id]
         except KeyError:
@@ -77,7 +83,6 @@ class AMQPProtocol(AMQClient):
             # style?
             ch = self.channelFactory(id, self.outgoing)
             # the PacketDelegate defined above requires this buffer
-            ch._basic_deliver_buffer = []
             self.channels[id] = ch
         return ch
 
