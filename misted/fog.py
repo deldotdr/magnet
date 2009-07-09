@@ -79,7 +79,7 @@ class Connection(AbstractPocket):
     This is the thing that glues the application protocol to the underlying
     transport. 
 
-    XXX: This should inherit something with logging and be persistable
+    @todo: This should inherit something with logging and be persistable
     """
     
     # this is where we get to create IMSTransport, if needed
@@ -305,7 +305,7 @@ class ListeningPort(BaseListeningPort):
     @defer.inlineCallbacks
     def doRead(self):
         """
-        XXX skipping error checks, max accepts, etc.
+        @todo skipping error checks, max accepts, etc.
         """
         # try #  implement handeling errors for bad connection requests
         print 'listen doRead'

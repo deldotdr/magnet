@@ -103,7 +103,7 @@ class _AMQPChannelConfig(object):
     def _listen(self):
         """start consumer
 
-        XXX need to check not already listening, connected, etc.
+        @todo need to check not already listening, connected, etc.
 
         AMQP Notes:
         Same for basic_consume, no queue name defaults to current queue of
@@ -154,14 +154,14 @@ class _AMQPChannelConfig(object):
          The peer could specify a queue name. Either way, the peer is
          responsible for setting the reply_to property
         """
-        # XXX need formal read method for buffer
+        # @todo need formal read method for buffer
         reply_to = ''
         amqp_msg = self.channel._basic_deliver_buffer.pop()
         try:
             reply_to = amqp_msg.content.properties['reply to'].split(':')
         except KeyError:
             # need reply_to for this 'server' pattern of pocket
-            # XXX need to learn best way to throw relavent exceptions
+            # @todo need to learn best way to throw relavent exceptions
             # and print trace backs
             log.err()
         return reply_to
@@ -178,7 +178,7 @@ class _AMQPChannelConfig(object):
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  
     # Control protocol
-    # XXX Figure out where to draw the line between config utility
+    # @todo Figure out where to draw the line between config utility
     #     functions and control protocol functions
     started = False
 
@@ -206,7 +206,7 @@ class _AMQPChannelConfig(object):
         """third msg of control protocol
         client to server
 
-        XXX is reply_to needed at this point?
+        @todo is reply_to needed at this point?
         """
         props = {}
         props['type'] = 'ccontrol'
@@ -264,8 +264,8 @@ class _PocketObject(_AMQPChannelConfig):
 
         @param addr address
         address should already be resolved into a real amqp address
-        XXX us config mixin
-        XXX shouldn't be deferred. 
+        @todo us config mixin
+        @todo shouldn't be deferred. 
         Should queue bind be called here?
          - might hold off until listen is called
          - might not always be for listen..
@@ -287,10 +287,10 @@ class _PocketObject(_AMQPChannelConfig):
 
         @param addr address
         address should already be resolved into a real amqp address
-        XXX the amqp address will be specified with an IAddress interface
+        @todo the amqp address will be specified with an IAddress interface
         This prototype uses (exchange, routing_key)
 
-        XXX: use config mixin to set up channel
+        @todo: use config mixin to set up channel
         set up bi-directional connection to receive replies
 
         """
@@ -312,7 +312,7 @@ class _PocketObject(_AMQPChannelConfig):
 
         # with a FD (socket), this method is called fileno
 
-        XXX in this prototype, 1:1 channel to pocket mapping makes sense
+        @todo in this prototype, 1:1 channel to pocket mapping makes sense
         """
         return self.channel.id
 
@@ -332,7 +332,7 @@ class _PocketObject(_AMQPChannelConfig):
         """listen for bi-directional incoming bi-directional connections,
         limit to num connections...
 
-        XXX use config mixin
+        @todo use config mixin
         """
         self._listen()
         
@@ -353,9 +353,9 @@ class _PocketObject(_AMQPChannelConfig):
         """send data. data is really a message...
         
 
-        XXX need checking to make sure pocket is setup for send
+        @todo need checking to make sure pocket is setup for send
             (connected, etc.)
-        XXX is this method of sending for bi-directional only?
+        @todo is this method of sending for bi-directional only?
         """
         self._send(data)
 
@@ -371,8 +371,8 @@ class _PocketObject(_AMQPChannelConfig):
     def _is_write_ready(self):
         """If True, the poll indicates this pocket as ready for writing.
         
-        XXX simple criteria for prototype
-        XXX always ready for now
+        @todo simple criteria for prototype
+        @todo always ready for now
         """
         return True
 
@@ -439,8 +439,8 @@ class PocketDynamo(DynamoCore):
     """Analog of select reactor
     Event driver for pockets
 
-    XXX This will be a service, or service collection
-    XXX  or a cooperator service
+    @todo This will be a service, or service collection
+    @todo  or a cooperator service
     """
 
     def __init__(self, reactor, client):
@@ -464,7 +464,7 @@ class PocketDynamo(DynamoCore):
 
         for pkts, method in ((r, 'doRead'), (w, 'doWrite')):
             for pkt in pkts:
-                # XXX not sure why dict is passed in and out of logger?
+                # @todo not sure why dict is passed in and out of logger?
                 _logrun(pkt, _drdw, pkt, method, dict)
 
     def _doReadOrWrite(self, pkt, method, dict):
@@ -524,7 +524,7 @@ def test():
     from misten import amqp
     client_creator = amqp.AMQPClientCreator(reactor)
     client = yield client_creator.connectTCP('amoeba.ucsd.edu', 5672)
-    # XXX hack
+    # @todo hack
     yield client.authenticate(client_creator.username,
             client_creator.password)
 
