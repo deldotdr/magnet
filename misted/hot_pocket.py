@@ -23,15 +23,20 @@ import uuid
 
 
 from twisted.internet import defer
+from twisted.python import log
 
 
 class _AMQPChannelConfig(object):
     """Mixin utility class for Pocket providing common amqp channel
     configuration convenience functions
+
+    amqp config methods often return deferreds; this mixin attempts to mask
+    those deferreds from the ITransport framework using it...
     """
+    consumer_tag = None
 
     @defer.inlineCallbacks
-    def simple_bidirectional(self):
+    def _bidirectional_connect(self):
         """configure a channel to consume off a certain queue, and make it
         so calling send will publish a message to a pre-determined
         routing_key/exchange pair
@@ -40,7 +45,7 @@ class _AMQPChannelConfig(object):
         need a queue to receive 
         need a route (key, exchange name) to sendto
 
-        Notes:
+        AMQP Notes:
         if both routing key and queue name not specified, routing key will
             be the current queue for the channel, which is the last
             declared queue
@@ -53,15 +58,73 @@ class _AMQPChannelConfig(object):
         to start the consumer, txAMQP requires us to know the consumer_tag
         for the local queue buffer. This might be improvable
         """
+        yield self.channel.open()
         yield self.channel.queue_declare(auto_delete=True)
         yield self.channel.queue_bind()
-        self.consumer_tag = str(uuid.uuid4())
+        # hopefully don't need to create consumer tags anymore
+        # self.consumer_tag = str(uuid.uuid4())
         # basic_consume is supposed to be synchronous, no yield
-        self.channel.basic_consume(consumer_tag=consumer_tag)
+        self.channel.basic_consume()
 
-    def simple_consume(self):
-        """consumer only configuration
+    def _connect(self):
         """
+        """
+
+    @defer.inlineCallbacks
+    def _listen(self):
+        """start consumer
+
+        XXX need to check not already listening, connected, etc.
+
+        AMQP Notes:
+        Same for basic_consume, no queue name defaults to current queue of
+        the channel
+        """
+        self.channel.basic_consume()
+
+    @defer.inlineCallbacks
+    def _bind(self):
+        """consumer configuration
+
+        use declare when given an explicit name to bind to
+        """
+        # prototype: routing_key == queue name
+        queue = self.bindAddress[1]
+        yield self.channel.open()
+        yield self.channel.queue_declare(queue=queue, auto_delete=True)
+        yield self.channel.queue_bind()
+
+    def _send(self, payload):
+        """
+        """
+        props = {}
+
+    def _accept(self):
+        """Listening socket gets first message from a peer
+
+        For this to work, the connecting peer *must* bind.
+         The bind can result in the broker creating a unique queue, or
+         The peer could specify a queue name. Either way, the peer is
+         responsible for setting the reply_to property
+        """
+        amqp_msg = self.channel._basic_deliver_buffer.pop()
+        try:
+            amqp_msg.content.properties.['reply_to']
+        except KeyError:
+            # need reply_to for this 'server' pattern of pocket
+            # XXX need to learn best way to throw relavent exceptions
+            # and print trace backs
+            log.err()
+
+    def _recv(self):
+        """Pop a message off the _basic_deliver_buffer, process amqp
+        Content class, and return payload
+        """
+        amqp_msg = self.channel._basic_deliver_buffer.pop()
+        props = 
+    
+    def _close(self):
+        self.channel.close()
 
 
 class _PocketObject(_AMQPChannelConfig):
@@ -71,19 +134,19 @@ class _PocketObject(_AMQPChannelConfig):
         uses an amqp channel
 
     Notes:
-    The config methods of this api should be sychronous to reduce
+    The config methods of this api should be synchronous to reduce
     complexity of Connection code (don't want deferreds in init procedures)
-    Might be able to acomplish this with TwistedDelegate and doWrite
+    Might be able to accomplish this with TwistedDelegate and doWrite
     pattern
     """
 
-    # reference back to messaging service core
+    # reference back to messaging service core (set by dynamo itself)
     dynamo = None
 
     def __init__(self, channel):
         self.channel = channel
         self.bindAddress = ''
-        self.consumer_tag = ''
+        self.dest_addr = ''
 
 
     def accept(self):
@@ -95,19 +158,30 @@ class _PocketObject(_AMQPChannelConfig):
 
         return pocket, addr
         """
+        # XXX need formal read method
+        # need to establish connect protocol... 
+        msg = self.channel._basic_deliver_buffer.pop()
+        # extract peer address
         self.dynamo.pocket()
 
     def bind(self, addr):
         """local address
 
+        @param addr address
+        address should already be resolved into a real amqp address
         XXX us config mixin
+        XXX shouldn't be deferred. 
+        Should queue bind be called here?
+         - might hold off until listen is called
+         - might not always be for listen..
         """
         self.bindAddress = addr
+        self._listen_queue_bind()
 
     def close(self):
         """close pocket
         """
-        self.channel.close()
+        self._close()
 
     @defer.inlineCallbacks
     def connect(self, addr):
@@ -125,7 +199,7 @@ class _PocketObject(_AMQPChannelConfig):
         """
         self.dest_addr = addr
         # this could result in warnings from the broker...
-        yield self.simple_bidirectional()
+        yield self._bidirectional_connect()
 
     def getpeername(self):
         """return remote addr (if connected)
@@ -144,7 +218,8 @@ class _PocketObject(_AMQPChannelConfig):
         """
         return self.channel.id
 
-    # prototype fd interface compatibility
+    # prototype FD interface compatibility
+    # may or may not be needed
     fileno = getid
 
     def getpocketopt(self, optname):
@@ -161,6 +236,7 @@ class _PocketObject(_AMQPChannelConfig):
 
         XXX use config mixin
         """
+        
 
     def consume(self):
         """similar to listen, but instead of accepting a new pocket
@@ -174,15 +250,37 @@ class _PocketObject(_AMQPChannelConfig):
 
     def send(self, data):
         """send data. data is really a message...
+        
 
         XXX need checking to make sure pocket is setup for send
             (connected, etc.)
+        XXX is this method of sending for bi-directional only?
         """
         exchange, routing_key = self.dest_addr
         content = Content(data)
         self.channel.basic_publish(exchange=exchange,
                                     content=content,
                                     routing_key=routing_key)
+
+    def _is_read_ready(self):
+        """If True, the poll indicates this pocket as ready for reading.
+
+        Prototype: check channel._basic_deliver_buffer
+        Eventually, this buffer check should gerneralize beyound
+        basic_deliver
+        """
+        return bool(len(self.channel._basic_deliver_buffer))
+
+    def _is_write_ready(self)
+        """If True, the poll indicates this pocket as ready for writing.
+        
+        XXX simple criteria for prototype
+        XXX always ready for now
+        """
+        return True
+
+    # convenience for prototype
+    read_ready, write_ready = _is_read_ready, _is_write_ready
 
 class DynamoCore(object):
     """The AMQP Connection
@@ -210,19 +308,71 @@ class DynamoCore(object):
         p.dynamo = self
         return p
 
+    def listenMS(self, addr, factory, backlog=50):
+        """Connects given factory to the given message service address.
+        """
+        p = fog.ListeningPort(addr, factory, self.reactor, self)
+        p.startListening()
+        return p
 
+    def connectMS(self, addr, factory, timeout=30, bindAddress=None):
+        """Connect a message service client to given message service
+        address.
+        """
+        c = fog.Connector(addr, factory, timeout, bindAddress,
+                self.reactor, self)
+        c.connect()
+        return c
 
-class Dynamo(object):
-    """Analog of reactor
-    event driver for pockets
+def _pocket_poll(self, readers, writers):
+    """Poll over read and write pocket objects checking for read and
+    writeablity (analog of select)
+
+    The getting of the pocket reference explicitly from the abstract pocket
+    might best be wrapped by a getter (maybe that's what filehandle is for)
+    """
+    readables = [r for r in readers if r.pocket.read_ready()]
+    writeables = [w for w in writers if w.pocket.write_ready()]
+    return readables, writeables
+
+class PocketDynamo(object):
+    """Analog of select reactor
+    Event driver for pockets
 
     XXX This will be a service, or service collection
     XXX  or a cooperator service
     """
 
     def __init__(self):
+        """
+        readers and writers are pocket obects
+        """
         self._readers = {}
         self._writers = {}
+
+    def doIteration(self):
+        """Run one iteration of checking the channel buffers
+
+        (This is the analog to what select does with file descriptors)
+        """
+        r, w = _pocket_poll(self._readers, self._writers)
+
+        _drdw = self._doReadOrWrite
+        _logrun = log.callWithLogger
+
+        for pkts, method in ((r, 'doRead'), (w, 'doWrite')):
+            for pkt in pkts:
+                # XXX not sure why dict is passed in and out of logger?
+                _logrun(pkt, _drdw, pkt, method, dict)
+
+    def _doReadOrWrite(self, pkt, method, dict):
+        """XXX not sure why dict
+        """
+        try:
+            # leaving out other error checking done in select reactor
+            why = getattr(pkt, method)()
+        except:
+            log.err()
 
     def addReader(self, reader):
         """
@@ -262,7 +412,11 @@ class Dynamo(object):
 
 
 
-
+def test():
+    """
+    How is the amqp client part of the dynamo going to get set up?
+    
+    """
 
 
 

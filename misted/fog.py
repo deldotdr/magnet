@@ -2,21 +2,18 @@ import sys
 
 from zope.interface import implements
 
-from twisted.internet import interfaces 
 from twisted.internet import base
-from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet import reactor
-from twisted.internet.protocol import ClientCreator
+from twisted.internet import interfaces 
+from twisted.python import log
 from twisted.python.util import unsignedID
+from twisted.persisted import styles
 
-from txamqp.protocol import AMQClient
-from txamqp.client import TwistedDelegate
-from txamqp.content import Content
-import txamqp.spec
+# minimize use of deferreds if possible
+from twisted.internet.defer import inlineCallbacks, returnValue
 
-from misted import river
 
-class AbstractPocket(log.Logger):
+class AbstractPocket(log.Logger, styles.Ephemeral, object):
     """Basis of pocket based connections (like abstract.FileDescriptor in
     twisted)
     Foundation of a messaging based Transport
@@ -75,7 +72,7 @@ class Connection(AbstractPocket):
         """
         """
         AbstractPocket.__init__(self, reactor, dynamo)
-        self.pkt = pkt
+        self.pocket = pkt
         self.protocol = protocol
 
     def write(self, data):
@@ -85,7 +82,7 @@ class Connection(AbstractPocket):
         this is where some intelligence passes application header data
         separate from undifferentiated application payload
         """
-        self.pkt.send(data)
+        self.pocket.send(data)
 
     def writeSequence(self, data):
         """
@@ -96,42 +93,24 @@ class Connection(AbstractPocket):
         """this is supposed to get data from mschan and pass to
         protocol.dataReceived
         """
-        data = self.pkt.recv()
+        data = self.pocket.recv()
         self.protocol.dataReceived(data)
 
-    # @inlineCallbacks
-    def XXXdoReadFromQueue(self):
-        """
-        XXX formalize into consumer thing..
-        XXX or dont use
-        """
-        # data = yield self.checkQueue()
-        data = self.mschan.received_buffer.pop()
-        print 'data', data.content.body
-        self.protocol.dataReceived(data.content.body)
-        # self.doReadFromQueue()
-
-
-    def loseConnection(Self):
-        """
-        """
-
-    def getPeer(self):
-        """
-        """
-
-    def getHost(self):
-        """
-        """
-
-    def failIfNotConnected(self, err):
-        print 'failIfNotConnected', err
 
     def startReading(self):
         """
         this has to do with making sure the deliver queue is read
         should it be defined here or in AbstractMessageChannel?
         """
+
+    def connectionLost(self, reason):
+        """
+        """
+
+    logstr = "Uninitialized"
+
+    def logPrefix(self):
+        return self.logstr
 
 
 class BaseClient(Connection):
@@ -193,6 +172,9 @@ class BaseClient(Connection):
     def connectionLost(self, reason):
         """
         """
+
+    def failIfNotConnected(self, err):
+        print 'failIfNotConnected', err
 
 class Client(BaseClient):
     """
@@ -300,14 +282,14 @@ class ListeningPort(BaseListeningPort):
         self.factory.doStart()
         pkt.listen()
         self.connected = True
-        self.pkt = pkt
+        self.pocket = pkt
         self.startReading()
 
     def doRead(self):
         """
         XXX skipping error checks, max accepts, etc.
         """
-        pkt, addr = self.pkt.accept()
+        pkt, addr = self.pocket.accept()
         protocol = self.factory.buildProtocol(addr)
         s = self.sessionno
         self.sessionno = s + 1
@@ -328,57 +310,36 @@ class ListeningPort(BaseListeningPort):
         Returns an IAddress provider.
         """
 
-class MistedConnector(base.BaseConnector):
+class Connector(base.BaseConnector):
     """
     The baseConnector knows what to do with the Factory
     The Client knows how to get and use the real underlying transport.
     """
 
-    def __init__(self, to_addr, factory, timeout, from_addr,
-            reactor=None, msgsrv=None):
-        self.to_addr = to_addr
-        self.from_addr = from_addr
-        self.msgsrv = msgsrv
+    def __init__(self, addr, factory, timeout, bindAddress, reactor, dynamo):
+        self.addr = addr
+        self.bindAddress = bindAddress
+        self.dynamo = dynamo
         base.BaseConnector.__init__(self, factory, timeout, reactor)
 
     def _makeTransport(self):
-        c = Client(self.to_addr, self.from_addr, self,
-                self.reactor, self.msgsrv)
-        # c.doConnect() # should NOT need this.
-        return c
+        return Client(self.addr, self.bindAddress, self, reactor, self.dynamo)
 
+    def getDestination(self):
+        """
+        The address given to the conenctor is a messaging service address
+        (nothing to do with amqp routing_keys, queue names, or exchange
+        names)
 
-def connectMS(to_addr, factory, timeout=30, from_addr=None, reactor=None, msgsrv=None):
-    c = MistedConnector(to_addr, factory, timeout, from_addr, reactor, msgsrv)
-    c.connect()
-    return c
+        What is it? What parts does it need?
 
-def listenMS(topic_address, factory, reactor, msgsrv):
-    p = ListeningPort(topic_address, factory, reactor=reactor,
-            msgsrv=msgsrv)
-    p.startListening()
-    return p
-
-from twisted.web.client import HTTPClientFactory
-def XXtest_client(_amqp_conn):
-    """need one of these available to MS Connection
-    """
-    global amqp_conn
-    amqp_conn = _amqp_conn
-    print 'got amqp_conn'
-    f = HTTPClientFactory('google.com')
-    c = connectMS('test_mshttp_server', f, from_addr='test_mshttp_client')
+        The prototype impementation is a trivial name.
+        """
+        return self.addr
 
 
 
 
-if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print "%s path_to_spec content" % sys.argv[0]
-        sys.exit(1)
-    spec = txamqp.spec.load(sys.argv[1])
-    d = amqpConnnectionFactory(spec)
-    d.addCallback(test_client)
-    reactor.run()
+
 
 

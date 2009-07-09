@@ -42,8 +42,6 @@ class PocketDelegate(TwistedDelegate):
         # or maybe client can manage buffers, just don't use deferred
         # queues
         ch._basic_deliver_buffer.append(msg)
-        # notification event. go through client reference setup by txAMQP
-        self.client.dynamo
 
 
 class AMQPProtocol(AMQClient):
