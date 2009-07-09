@@ -1,22 +1,18 @@
 """
 This is the core abstraction of amqp. This class provides the fundamental
-unit of communication. As the socket is to TCP/IP, the "pocket" is to the
-messaging service diff thingy.
+unit of communication. As the socket is to TCP/IP, the "Pocket Object" is 
+to the messaging service.
 
 In magnet, maybe this should be called core, or dynamo, or something. Here,
-we get to have fun with names...hot pocket hot pocket: it's a hot pocket
-stuffed inside a hot pocket, and it tastes just like a hot pocket.
+we get to have fun with names...
+Hot pocket hot pocket: It's a hot pocket stuffed inside a hot pocket, and 
+it tastes just like a hot pocket.
 
 
 
-The simplest case is that the hot_pocket conveniently wraps around one amqp
-channel. 
-For the framework, it needs to provide a mechanism for notification when
-ready for reading and writing; the same idea as the relationship between a
-socket and select.
-
-This might also be where the analog to the select reactor implementation is
-defined.
+For the framework, a Pocket needs to provide a mechanism for notification
+when ready for reading and writing; the same idea as the relationship
+between a socket and select.
 """
 
 import uuid
@@ -24,6 +20,8 @@ import uuid
 
 from twisted.internet import defer
 from twisted.python import log
+
+# Message Serviec message types 
 
 
 class _AMQPChannelConfig(object):
@@ -37,9 +35,11 @@ class _AMQPChannelConfig(object):
 
     @defer.inlineCallbacks
     def _bidirectional_connect(self):
-        """configure a channel to consume off a certain queue, and make it
+        """Configure a channel to consume off a certain queue, and make it
         so calling send will publish a message to a pre-determined
         routing_key/exchange pair
+
+        Implement control protocol interactions.
 
         Setup a converstion pattern:
         need a queue to receive 
@@ -58,17 +58,23 @@ class _AMQPChannelConfig(object):
         to start the consumer, txAMQP requires us to know the consumer_tag
         for the local queue buffer. This might be improvable
         """
-        yield self.channel.open()
-        yield self.channel.queue_declare(auto_delete=True)
-        yield self.channel.queue_bind()
         # hopefully don't need to create consumer tags anymore
-        # self.consumer_tag = str(uuid.uuid4())
-        # basic_consume is supposed to be synchronous, no yield
-        self.channel.basic_consume()
+        self.consumer_tag = str(uuid.uuid4())
+        yield self.channel.basic_consume(consumer_tag=self.consumer_tag)
+        starting_msg = yield self._connect_start()
+        props = starting_msg.content.properties
+        self.dest_addr = props['reply_to'].split('.')
+        self.started = True
+        self._connect_started()
+        defer.returnValue(None)
+        
 
-    def _connect(self):
+    def _connect_from_accept(self):
         """
+        Start connection endpoint resulting from an accept
         """
+        self.channel.basic_consume()
+        self._connect_starting()
 
     @defer.inlineCallbacks
     def _listen(self):
@@ -87,17 +93,29 @@ class _AMQPChannelConfig(object):
         """consumer configuration
 
         use declare when given an explicit name to bind to
+
+        when broker creates queue name, set bindAddress
         """
         # prototype: routing_key == queue name
         queue = self.bindAddress[1]
         yield self.channel.open()
-        yield self.channel.queue_declare(queue=queue, auto_delete=True)
+        if queue:
+            yield self.channel.queue_declare(queue=queue, auto_delete=True)
+        else:
+            reply = yield self.channel.queue_declare(auto_delete=True)
+            self.bindAddress[1] = reply.queue
         yield self.channel.queue_bind()
 
-    def _send(self, payload):
+    def _send(self, payload='', props={}):
         """
         """
-        props = {}
+        if self.bindAddress:
+            props['reply_to'] = '.'.join(self.bindAddress)
+        exchange, routing_key = self.dest_addr
+        content = Content(payload, properties=props)
+        self.channel.basic_publish(exchange=exchange,
+                                    content=content,
+                                    routing_key=routing_key)
 
     def _accept(self):
         """Listening socket gets first message from a peer
@@ -107,31 +125,76 @@ class _AMQPChannelConfig(object):
          The peer could specify a queue name. Either way, the peer is
          responsible for setting the reply_to property
         """
+        # XXX need formal read method for buffer
         amqp_msg = self.channel._basic_deliver_buffer.pop()
         try:
-            amqp_msg.content.properties.['reply_to']
+            reply_to = amqp_msg.content.properties.['reply_to'].split('.')
         except KeyError:
             # need reply_to for this 'server' pattern of pocket
             # XXX need to learn best way to throw relavent exceptions
             # and print trace backs
             log.err()
+        return reply_to
 
     def _recv(self):
         """Pop a message off the _basic_deliver_buffer, process amqp
         Content class, and return payload
         """
         amqp_msg = self.channel._basic_deliver_buffer.pop()
-        props = 
+        props = amqp_msg.content.properties
+        return amqp_msg.content.body
     
     def _close(self):
         self.channel.close()
+
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  
+    # Control protocol
+    # XXX Figure out where to draw the line between config utility
+    #     functions and control protocol functions
+    started = False
+
+    def _connect_start(self):
+        """first msg of control protocol
+        client to listener
+        """
+        props = {}
+        props['type'] = 'control'
+        props['message_id'] = 'start'
+        props['reply_to'] = self.bindAddress
+        self._send(props=props)
+        d = self.channel.deliver_queue.get()
+        return d
+
+    def _connect_starting(self):
+        """second msg of control protocol
+        server (new connection) to client
+        """
+        props = {}
+        props['type'] = 'control'
+        props['message_id'] = 'starting'
+        props['reply_to'] = self.bindAddress
+        self._send(props=props)
+
+    def _connect_started(self):
+        """third msg of control protocol
+        client to server
+
+        XXX is reply_to needed at this point?
+        """
+        props = {}
+        props['type'] = 'control'
+        props['message_id'] = 'started'
+        props['reply_to'] = self.bindAddress
+        self._send(props=props)
+
+
 
 
 class _PocketObject(_AMQPChannelConfig):
     """Like socket...heh.
     
     First prototype:
-        uses an amqp channel
+        uses one amqp channel
 
     Notes:
     The config methods of this api should be synchronous to reduce
@@ -148,6 +211,9 @@ class _PocketObject(_AMQPChannelConfig):
         self.bindAddress = ''
         self.dest_addr = ''
 
+        self.started_deferred = None
+        self._bound = False
+
 
     def accept(self):
         """for listening port pattern
@@ -158,11 +224,13 @@ class _PocketObject(_AMQPChannelConfig):
 
         return pocket, addr
         """
-        # XXX need formal read method
-        # need to establish connect protocol... 
-        msg = self.channel._basic_deliver_buffer.pop()
-        # extract peer address
-        self.dynamo.pocket()
+        # peer_addr should be resolved already (arrive resolved in connect
+        # message)
+        peer_addr = self._accept()
+        pkt = self.dynamo.pocket()
+        pkt.bind(peer_addr)
+        pkt._connect_from_accept()
+        return pkt, peer_addr
 
     def bind(self, addr):
         """local address
@@ -176,16 +244,17 @@ class _PocketObject(_AMQPChannelConfig):
          - might not always be for listen..
         """
         self.bindAddress = addr
-        self._listen_queue_bind()
+        self.__bind()
+        self._bound = True
 
     def close(self):
         """close pocket
         """
         self._close()
 
-    @defer.inlineCallbacks
     def connect(self, addr):
-        """Establish bi-directional messaging connection with peer
+        """
+        Initiate a bi-directional messaging connection with peer
         application at remote address addr
 
         @param addr address
@@ -199,7 +268,8 @@ class _PocketObject(_AMQPChannelConfig):
         """
         self.dest_addr = addr
         # this could result in warnings from the broker...
-        yield self._bidirectional_connect()
+        d = self._bidirectional_connect()
+        return d
 
     def getpeername(self):
         """return remote addr (if connected)
@@ -236,6 +306,7 @@ class _PocketObject(_AMQPChannelConfig):
 
         XXX use config mixin
         """
+        self._listen()
         
 
     def consume(self):
@@ -244,9 +315,11 @@ class _PocketObject(_AMQPChannelConfig):
         data with no intention of an implicit reply response.
         """
 
-    def recv(self, num):
-        """receive num message[s]
+    def recv(self):
+        """receive message
+        used for really receiving data, never control data
         """
+        return self._recv()
 
     def send(self, data):
         """send data. data is really a message...
@@ -366,9 +439,10 @@ class PocketDynamo(object):
                 _logrun(pkt, _drdw, pkt, method, dict)
 
     def _doReadOrWrite(self, pkt, method, dict):
-        """XXX not sure why dict
+        """
         """
         try:
+            # This just calls doRead or doWrite
             # leaving out other error checking done in select reactor
             why = getattr(pkt, method)()
         except:

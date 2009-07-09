@@ -5,8 +5,9 @@ txAMQP
 import os
 
 from txamqp import spec
-from txamqp.protocol import AMQClient
+from txamqp.protocol import AMQClient, AMQChannel
 from txamqp.client import TwistedDelegate
+from txamqp.queue import TimeoutDeferredQueue
 
 from twisted.python import log
 from twisted.internet import defer
@@ -15,6 +16,12 @@ from twisted.internet import protocol
 import misted
 # Spec file is loaded from the egg bundle. Hard code 0-8 for now...
 spec_path_def = os.path.join(misted.__path__[0], 'spec', 'amqp0-8.xml')
+
+class Channel(AMQChannel):
+
+    def __init__(self, id, outgoing):
+        AMQChannel.__init__(self, id, outgoing)
+        self.deliver_queue = TimeoutDeferredQueue()
 
 class PocketDelegate(TwistedDelegate):
     """TwistedDelegate is a little frameworkish thing utilized by txAMQP
@@ -38,10 +45,11 @@ class PocketDelegate(TwistedDelegate):
 
         XXX plan for handling syconicity of buffering and reading messages.
         """
-        # best design? maybe use setter, 
-        # or maybe client can manage buffers, just don't use deferred
-        # queues
-        ch._basic_deliver_buffer.append(msg)
+        if msg.content.properties['type'] == 'control':
+            ch.deliver_queue.put(msg)
+        else:
+            ch._basic_deliver_buffer.append(msg)
+
 
 
 class AMQPProtocol(AMQClient):
@@ -51,6 +59,7 @@ class AMQPProtocol(AMQClient):
     """
     
     next_channel_id = 0
+    channelClass = Channel
 
     def channel(self, id=None):
         """Overrides AMQClient. Improvements: 
@@ -71,6 +80,18 @@ class AMQPProtocol(AMQClient):
             ch._basic_deliver_buffer = []
             self.channels[id] = ch
         return ch
+
+    def queue(self, key):
+        """channel basic_deliver queue
+        overrides AMQClient
+            1) no need to be deferred
+        """
+        try:
+            q = self.queues[key]
+        except KeyError:
+            q = TimeoutDeferredQueue()
+            self.queues[key] = q
+        return q
 
     def connectionMade(self):
         AMQClient.connectionMade(self)

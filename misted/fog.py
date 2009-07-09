@@ -10,7 +10,7 @@ from twisted.python.util import unsignedID
 from twisted.persisted import styles
 
 # minimize use of deferreds if possible
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet import defer 
 
 
 class AbstractPocket(log.Logger, styles.Ephemeral, object):
@@ -152,7 +152,7 @@ class BaseClient(Connection):
         self.realAddress = address
         self.doConnect()
 
-    @inlineCallbacks
+    @defer.inlineCallbacks
     def doConnect(self):
         """
         this is where the application protocol is instantiated
@@ -197,10 +197,10 @@ class Client(BaseClient):
 
         whenDone = self.resolveAddress # this thing figures out the real
                                         # amqp address to talk to
+        # Connections must always call bind. Pocket will handle None address
+        pkt.bind(bindAddress)
 
-        if bindAddress:
-            pkt.bind(bindAddress)
-
+        # Need to create Pocket errors/exceptions
         err = None
         # What's this dance?
         # why is whenDone passed?
@@ -270,7 +270,7 @@ class ListeningPort(BaseListeningPort):
         self.interface = interface
 
 
-    @inlineCallbacks
+    @defer.inlineCallbacks
     def startListening(self):
         """
         configuration of mschan
@@ -289,6 +289,7 @@ class ListeningPort(BaseListeningPort):
         """
         XXX skipping error checks, max accepts, etc.
         """
+        # try #  implement handeling errors for bad connection requests
         pkt, addr = self.pocket.accept()
         protocol = self.factory.buildProtocol(addr)
         s = self.sessionno
