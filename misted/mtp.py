@@ -1,3 +1,15 @@
+"""
+Messaging Service Transport
+
+This module is modeled on twisted.internet.tcp
+
+This module provides implementations of the interfaces:
+    ITransport
+    IConnector
+    IListeningPort
+
+"""
+
 import sys
 
 from zope.interface import implements
@@ -9,7 +21,6 @@ from twisted.python import log
 from twisted.python.util import unsignedID
 from twisted.persisted import styles
 
-# minimize use of deferreds if possible
 from twisted.internet import defer 
 
 

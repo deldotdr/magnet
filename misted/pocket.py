@@ -1,18 +1,14 @@
-"""
-This is the core abstraction of amqp. This class provides the fundamental
-unit of communication. As the socket is to TCP/IP, the "Pocket Object" is 
-to the messaging service.
+""" 
+_PocketObect is the core abstraction of amqp.  This class provides the
+fundamental unit of communication. 
+Pocket is to messaging service transport (mtp) as socket is to TCP/IP
 
-In magnet, maybe this should be called core, or dynamo, or something. Here,
-we get to have fun with names...
-Hot pocket hot pocket: It's a hot pocket stuffed inside a hot pocket, and 
-it tastes just like a hot pocket.
+Dynamo is the event driver and PocketObject manager; it is the reactor for
+the messaging service.
 
 
-
-For the framework, a Pocket needs to provide a mechanism for notification
-when ready for reading and writing; the same idea as the relationship
-between a socket and select.
+@todo Robust control protocol inside of Pocket. These messages are not
+visible or accessible out side of the pocket.
 """
 
 import uuid
@@ -24,9 +20,9 @@ from twisted.python import log
 
 from txamqp.content import Content
 
-from misted import fog
+from misted import mtp
 
-# Message Serviec message types 
+# Message Service message types 
 
 
 class _AMQPChannelConfig(object):
@@ -212,8 +208,6 @@ class _AMQPChannelConfig(object):
         props['type'] = 'ccontrol'
         props['message id'] = 'started'
         self._send(props=props)
-
-
 
 
 class _PocketObject(_AMQPChannelConfig):
@@ -409,7 +403,7 @@ class DynamoCore(object):
     def listenMS(self, addr, factory, backlog=50):
         """Connects given factory to the given message service address.
         """
-        p = fog.ListeningPort(addr, factory, reactor=self.reactor, dynamo=self)
+        p = mtp.ListeningPort(addr, factory, reactor=self.reactor, dynamo=self)
         p.startListening()
         return p
 
@@ -417,7 +411,7 @@ class DynamoCore(object):
         """Connect a message service client to given message service
         address.
         """
-        c = fog.Connector(addr, factory, timeout, bindAddress, self.reactor, self)
+        c = mtp.Connector(addr, factory, timeout, bindAddress, self.reactor, self)
         c.connect()
         return c
 
@@ -426,7 +420,8 @@ class DynamoCore(object):
 
 def _pocket_poll(readers, writers):
     """Poll over read and write pocket objects checking for read and
-    writeablity (analog of select)
+    writeablity. This is the equivalent to select polling over file
+    descriptors.
 
     The getting of the pocket reference explicitly from the abstract pocket
     might best be wrapped by a getter (maybe that's what filehandle is for)
@@ -512,21 +507,6 @@ class PocketDynamo(DynamoCore):
         """
         """
         return self._writers.keys()
-
-
-@defer.inlineCallbacks
-def test():
-    """
-    How is the amqp client part of the dynamo going to get set up?
-    
-    """
-    from twisted.internet import defer
-    from misten import amqp
-    client_creator = amqp.AMQPClientCreator(reactor)
-    client = yield client_creator.connectTCP('amoeba.ucsd.edu', 5672)
-    # @todo hack
-    yield client.authenticate(client_creator.username,
-            client_creator.password)
 
 
 

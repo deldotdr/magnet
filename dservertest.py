@@ -10,8 +10,7 @@ from twisted.web import server, proxy, resource, static
 from twisted.python import log
 
 from misted.amqp import AMQPClientCreator
-from misted import fog
-from misted.hot_pocket import PocketDynamo
+from misted.pocket import PocketDynamo
 
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672
