@@ -36,7 +36,7 @@ PROJECT_NUMBER         = 0.1
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) 
 # base path where the generated documentation will be put. 
 # If a relative path is entered, it will be relative to the location 
-# where doxygen was started. If left blank the current directory will be used.
+# where doxygen was started. If left blank the current directory will be used. 
 
 OUTPUT_DIRECTORY       = docs
 
