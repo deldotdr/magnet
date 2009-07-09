@@ -14,7 +14,7 @@ warning, is the Shiny! New! Way! to use AMQP from OOI code. It provides a
 twisted-compatible connection abstraction based on 'pockets', which are one
 letter different from sockets.
 
-@section Its a beta
+@section Notes
 
 Much more docs on the way, keep an eye out at http://amoeba.ucsd.edu/doxygen/Misted
 """
