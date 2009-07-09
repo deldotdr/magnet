@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 
 """
+@file docs-only.py
+@author Dorian Raymer
+@author pfh
+@date 7/9/09
+
 @mainpage
+
 
 @section What is Misted?
 
@@ -14,3 +20,5 @@ letter different from sockets.
 Much more docs on the way, keep an eye out at http://amoeba.ucsd.edu/doxygen/Misted
 
 """
+
+print 'No code here, just documentation'
