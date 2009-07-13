@@ -1,6 +1,10 @@
 """
 Basic Protocol - Factory pattern implementation for the AMQP protocol using
 txAMQP
+
+@file amqp.py
+@author Dorian Raymer
+@date 7/8/09
 """
 import os
 

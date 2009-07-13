@@ -8,6 +8,16 @@ This module provides implementations of the interfaces:
     IConnector
     IListeningPort
 
+ITransport is the central interface. The mtp Connection implements the
+generic ITransport interface, and wraps around a Pocket object instance.
+
+IConnectod and IListeningPort facilitate creating new Connections. They
+represent a certain pattern of usage of a Connection (they will not be the
+only patterns).
+
+@file mtp.py
+@author Dorian Raymer
+@date 7/9/09
 """
 
 import sys
@@ -15,25 +25,62 @@ import sys
 from zope.interface import implements
 
 from twisted.internet import base
+from twisted.internet import abstract
 from twisted.internet import reactor
+from twisted.internet import defer 
+from twisted.internet import error 
 from twisted.internet import interfaces 
 from twisted.python import log
+from twisted.python import failure
+from twisted.python import reflect
 from twisted.python.util import unsignedID
 from twisted.persisted import styles
 
-from twisted.internet import defer 
 
-
-class AbstractPocket(log.Logger, styles.Ephemeral, object):
-    """Basis of pocket based connections (like abstract.FileDescriptor in
-    twisted)
-    Foundation of a messaging based Transport
-
-    Not much going on here except formalities, following the ITransport
-    interface, and ititing state variables
+class AbstractDescriptor(abstract.FileDescriptor):
+    """
     """
 
-    implements(interfaces.ITransport)
+    def __init__(self, reactor, dynamo):
+        abstract.FileDescriptor.__init__(self, reactor)
+        self.dynamo = dynamo
+
+    def startReading(self):
+        """
+        """
+        self.dynamo.addReader(self)
+
+    def startWriting(self):
+        self.dynamo.addWriter(self)
+
+    def stopReading(self):
+        self.dynamo.removeReader(self)
+
+    def stopWriting(self):
+        self.dynamo.removeWriter(self)
+
+
+class XAbstractDescriptor(log.Logger, styles.Ephemeral, object):
+    """
+    An abstract superclass of all objects which may be notified when they
+    are readable or writable. This is modeled after
+    twisted.internet.abstract.FileDescriptor, but we are not dealing with
+    file descriptors -- this class is the abstract representation of the
+    core new concept provided by the 'messaging service' or messaging
+    based Inter Process Communication. The name AbstractDescriptor is
+    tentative (a better name will emerge with refinement of the messaging
+    service concepts/understanding)
+
+    @todo
+    Rename this. 
+    Background:
+    The tcp connection inherits the FileDescriptor class. FileDescriptor is
+    an abstract super class of objects that can be notified when they are
+    readable or writable -- an object which can be operated on by select().
+
+    """
+
+    # implements(interfaces.ITransport)
 
     connected = 0
     disconnected = 0
@@ -81,7 +128,9 @@ class AbstractPocket(log.Logger, styles.Ephemeral, object):
     def stopWriting(self):
         self.dynamo.removeWriter(self)
 
-class Connection(AbstractPocket):
+
+
+class Connection(AbstractDescriptor):
     """Messaging Service Connection.
     Connections wrap around the "physical" lower level part of the network.
 
@@ -100,35 +149,50 @@ class Connection(AbstractPocket):
     def __init__(self, pkt, protocol, reactor, dynamo):
         """
         """
-        AbstractPocket.__init__(self, reactor, dynamo)
+        AbstractDescriptor.__init__(self, reactor, dynamo)
         self.pocket = pkt
         self.protocol = protocol
-
-    def write(self, data):
-        """
-        bypassing async startWriting/doWrite procedure
-        
-        this is where some intelligence passes application header data
-        separate from undifferentiated application payload
-        """
-        self.pocket.send(data)
-
-    def writeSequence(self, data):
-        """
-        Not Implemented (yet)
-        """
 
     def doRead(self):
         """this is supposed to get data from mschan and pass to
         protocol.dataReceived
         """
         data = self.pocket.recv()
+        print 'do read', data
         self.protocol.dataReceived(data)
 
+    def writeSomeData(self, data):
+        """
+        bypassing async startWriting/doWrite procedure
+        
+        this is where some intelligence passes application header data
+        separate from undifferentiated application payload
+        """
+        print 'wrtie some data', data
+        self.pocket.send(data)
+
+    write = writeSomeData
+
+    def _closeWriteConnection(self):
+        """
+        @todo
+        Does this need to be implemented?
+        """
+
+    def readConnectionLost(self, reason):
+        """
+        @todo
+        Does this need to be implemented?
+        """
 
     def connectionLost(self, reason):
         """
         """
+        AbstractDescriptor.connectionLost(self, reason)
+        protocol = self.protocol
+        del self.protocol
+        del self.pocket
+        protocol.connectionLost(reason)
 
     logstr = "Uninitialized"
 
@@ -198,9 +262,28 @@ class BaseClient(Connection):
     def connectionLost(self, reason):
         """
         """
+        if not self.connected:
+            self.failIfNotConnected(error.ConnectError(string=reason))
+        else:
+            Connection.connectionLost(self, reason)
+            self.connector.connectionLost(reason)
 
     def failIfNotConnected(self, err):
-        print 'failIfNotConnected', err
+        """
+        Copied from tcp. 
+        @todo
+        make sure this makes sense
+        """
+        if (self.connected or self.disconnected or not hasattr(self,
+            "connector")):
+            return
+        self.connector.connectionFailed(failure.Failure(err))
+        if hasattr(self, "reactor"):
+            self.stopReading()
+            self.stopWriting()
+            del self.connector
+
+
 
 class Client(BaseClient):
     """
@@ -253,12 +336,32 @@ class Server(Connection):
         self.sessionno = sessionno # ?
         self.address = client_address# [0] # ?
         self.dynamo = dynamo
+        self.logstr = "%s, %s, %s" % (self.protocol.__class__.__name__,
+                                        self.sessionno,
+                                        str(self.address))
+        self.repstr = "<%s # %s on %s>" % (self.protocol.__class__.__name__,
+                                        self.sessionno,
+                                        str(self.server.listen_address))
 
         self.startReading() # a Connection responsability
         self.connected = 1
 
-class BaseListeningPort(AbstractPocket):
+    def getHost(self):
+        """
+        @todo
+        evolve this to work with pocket address
+        """
+
+    def getPeer(self):
+        """
+        @todo
+        evolve this to work with pocket address
+        """
+
+class BaseListeningPort(AbstractDescriptor):
     """
+    Connection for creating connections.
+    The listening port pattern is a server pattern.
     """
 
     def createMessagingPocket(self):
@@ -297,6 +400,13 @@ class ListeningPort(BaseListeningPort):
         self.interface = interface
         self.dynamo = dynamo
 
+    def __repr__(self):
+        """
+        @todo
+        finish address resolve...
+        """
+        return "<%s of %s on %s>" % (self.__class__,
+                self.factory.__class__, str(self.listen_address))
 
     @defer.inlineCallbacks
     def startListening(self):
@@ -321,6 +431,7 @@ class ListeningPort(BaseListeningPort):
         # try #  implement handeling errors for bad connection requests
         print 'listen doRead'
         pkt, addr = yield self.pocket.accept()
+        print 'accepted', pkt, addr
         protocol = self.factory.buildProtocol(addr)
         print 'protocol server made', protocol
         s = self.sessionno
@@ -331,19 +442,56 @@ class ListeningPort(BaseListeningPort):
         # transport = self._preMakeConnection(transport)
         protocol.makeConnection(transport)
 
-    def stopListening(self):
+    def loseConnection(self,
+            connDone=failure.Failure(error.ConnectionDone('Conenction Donw'))):
         """
         """
+        self.disconnecting = True
+        self.stopReading()
+        if self.connected:
+            self.deferred = defer.Deferred()
+            self.reactor.callLater(0, self.connectionLost, connDone)
+            return self.deferred
+
+    stopListening = loseConnection
+
+    def connectionLost(self, reason):
+        log.msg('(Messaging Service Listener %s Closed)' %
+                str(self.listen_address))
+        BaseListeningPort.connectionLost(self, reason)
+
+        d = None
+        if hasattr(self, "deferred"):
+            d = self.deferred
+            del self.deferred
+
+        try:
+            self.factory.doStop()
+        except:
+            self.disconnecting = False
+            if d is not None:
+                d.errback(failure.Failure())
+            else:
+                raise
+        else:
+            self.disconnecting = False
+            if d is not None:
+                d.callback(None)
+
+    def logPrefix(self):
+        return reflect.qual(self.factory.__class__)
 
     def getHost(self):
         """
-        Get the host that this port is listening for.
-
-        Returns an IAddress provider.
+        @todo
         """
 
 class Connector(base.BaseConnector):
     """
+    Pattern for establishing bi-directional 'messaging service' connections
+    between two peers'
+    
+    @note
     The baseConnector knows what to do with the Factory
     The Client knows how to get and use the real underlying transport.
     """
