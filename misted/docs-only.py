@@ -34,7 +34,7 @@ from twisted.internet import reactor
 from misted import amqp
 from misted import core
 
-\@defer.inlineCallbacks
+@defer.inlineCallbacks
 def startup():
     clientCreator = amqp.AMQPClientCreator(reactor)
     client = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
