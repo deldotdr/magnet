@@ -2,6 +2,8 @@
 @file protocol.py
 @author Dorian Raymer
 @date 7/13/09
+@brief This implements the ClientCreator, analagous to the Twisted version of same.
+@note Just implements connectMS()
 """
 
 from twisted.internet import defer
@@ -18,8 +20,9 @@ class ClientCreator(object):
         """Client Creator for 'messaging service'.
         @param reactor Usual Twisted reactor object.
         @param p_reactor The Pocket Reactor instance.
-        @param protocolClass The client protocol class to connect to the
-        'messaging service'
+        @param protocolClass The client protocol class to connect to the 'messaging service'
+        @param args Passed through args
+        @param kwargs Pass-through kwargs
         """
         self.reactor = reactor
         self.p_reactor = p_reactor
@@ -32,6 +35,7 @@ class ClientCreator(object):
         q Deferred of resulting protocol instance.
         @param address 'Messaging service' remote address (name)
         @param bindAddress 'Messaging service' address (name) to listen on.
+        @param timeout Error timeout, in seconds
         """
         d = defer.Deferred()
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
