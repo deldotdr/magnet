@@ -8,7 +8,7 @@ from twisted.web.client import HTTPClientFactory
 from twisted.web import server, proxy
 
 from misted.amqp import AMQPClientCreator
-from misted.pocket import PocketDynamo
+from misted.core import PocketReactor
 
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672
@@ -43,17 +43,26 @@ class MSClient(protocol.Protocol):
 class MSClientFactory(protocol.ClientFactory):
     protocol = MSClient
 
+def show_page(page):
+    print page
+    import os
+    print os.path.abspath('.')
+    f = open('test.html', 'w')
+    f.write(page)
+    f.close()
+
+
 @inlineCallbacks
 def main(reactor):
     clientCreator = AMQPClientCreator(reactor)
     client = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
-    yield client.authenticate(clientCreator.username,
-            clientCreator.password)
+    # yield client.authenticate(clientCreator.username, clientCreator.password)
 
-    dynamo = PocketDynamo(reactor, client)
-    # f = HTTPClientFactory('http://amoeba.ucsd.edu')
+    dynamo = PocketReactor(reactor, client)
+    f = HTTPClientFactory('http://amoeba.ucsd.edu')
+    f.deferred.addCallback(show_page)
     # f = MSClientFactory()
-    f = UtilClientFactory()
+    # f = UtilClientFactory()
     c = dynamo.connectMS('test-http-server', f)
     dynamo.run()
 

@@ -57,7 +57,9 @@ class PocketReactorCore(object):
         p.startListening()
         return p
 
-    def connectMS(self, addr, factory, timeout=30, bindAddress=['amq.direct', '']):
+    def connectMS(self, addr, factory, timeout=30, bindAddress=None):
+        if bindAddress == None:
+            bindAddress = ['amq.direct', '']
         """Connect a message service client to given message service
         address.
         """
@@ -66,7 +68,10 @@ class PocketReactorCore(object):
         return c
 
     def run(self):
-        self.loop.start(0.5)
+        """
+        @todo improve this loop mechanism
+        """
+        self.loop.start(0.001)
 
 def _pocket_poll(readers, writers):
     """Poll over read and write pocket objects checking for read and

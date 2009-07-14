@@ -21,7 +21,10 @@ import misted
 # Spec file is loaded from the egg bundle. Hard code 0-8 for now...
 spec_path_def = os.path.join(misted.__path__[0], 'spec', 'amqp0-8.xml')
 
-class Channel(AMQChannel):
+class AMQPChannel(AMQChannel):
+    """
+    @note Adds to and augments functionality of the txAMQP library.
+    """
 
     def __init__(self, id, outgoing):
         AMQChannel.__init__(self, id, outgoing)
@@ -29,10 +32,10 @@ class Channel(AMQChannel):
         self._basic_deliver_buffer = []
 
 class PocketDelegate(TwistedDelegate):
-    """TwistedDelegate is a little frameworkish thing utilized by txAMQP
-    for writing handlers to amqp methods from the broker.
+    """TwistedDelegate is the mechanism txAMQP provides for writing 
+    specialized handlers for specific amqp methods from the broker.
 
-    This should somehow be related with the Dynamo of the messaging
+    @note This should somehow be related with the PocketReactor of the messaging
     service.
 
     Handling methods, like deliver, will provide the mechanism for driving
@@ -45,10 +48,10 @@ class PocketDelegate(TwistedDelegate):
         """This overrides TwistedDelegate.basic_deliver.
         
         The deferred queue implementation of txAMQP will be replaced with a
-        regular queue (incomming buffer) and the pocket will be notified
+        regular queue (incoming buffer) and the pocket will be notified
         when to read from it.
 
-        XXX plan for handling syconicity of buffering and reading messages.
+        @todo plan for handling sycnchronicity of buffering and reading messages.
         """
         if msg.content.properties['type'] == 'control':
             ch.deliver_queue.put(msg)
@@ -57,14 +60,13 @@ class PocketDelegate(TwistedDelegate):
 
 
 
-class AMQPProtocol(AMQClient):
+class AMQPClient(AMQClient):
     """
-    txAMQP defines AMQClient, but this is really the client (hence the name
-    AMQPProtocol ;-) 
+    @note Adds to and augments functionality of the txAMQP library.
     """
     
     next_channel_id = 0
-    channelClass = Channel
+    channelClass = AMQPChannel
 
     def channel(self, id=None):
         """Overrides AMQClient. Improvements: 
@@ -99,16 +101,21 @@ class AMQPProtocol(AMQClient):
         return q
 
     def connectionMade(self):
+        """
+        Here you can do something when the connection is made.
+        """
         AMQClient.connectionMade(self)
-        # d = self.authenticate(self.factory.username, self.factory.password)
-        # d.addCallback
+
+    def frameLengthExceeded(self):
+        """
+        """
 
 class AMQPClientFactory(protocol.ClientFactory):
     """
     This plugs the amqp protocol/client into the transport.
     """
 
-    protocol = AMQPProtocol
+    protocol = AMQPClient
 
     def __init__(self, username='guest', password='guest', 
                         vhost='/', spec_path=spec_path_def):
@@ -136,7 +143,7 @@ class AMQPClientCreator(object):
     ConnectTCP is called with TCP configuration.
     """
 
-    amqpProtocol = AMQPProtocol
+    amqpProtocol = AMQPClient
     amqpDelegate = PocketDelegate
 
     def __init__(self, reactor, username='guest', password='guest', 
@@ -160,9 +167,18 @@ class AMQPClientCreator(object):
         f = protocol._InstanceFactory(self.reactor, p, d)
         self.connector = self.reactor.connectTCP(host, port, f, timeout=timeout,
                 bindAddress=bindAddress)
+        d.addCallback(self._broker_login)
         return d
 
-
+    @defer.inlineCallbacks
+    def _broker_login(self, client):
+        """
+        @note timing of this is funny because instance factory already
+        returned client reference in deferred callback
+        Maybe instance factory isn't needed?
+        """
+        yield client.authenticate(self.username, self.password)
+        defer.returnValue(client)
 
 
 

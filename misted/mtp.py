@@ -1,5 +1,5 @@
 """
-Messaging Service Transport
+Messaging Service Transport and Connection Patterns
 
 This module is modeled on twisted.internet.tcp
 
@@ -10,6 +10,15 @@ This module provides implementations of the interfaces:
 
 ITransport is the central interface. The mtp Connection implements the
 generic ITransport interface, and wraps around a Pocket object instance.
+
+Connection is the general transport object. 
+
+Connections can be created in different ways, for different usages.
+Server/ListenPort and Connection/Connector are two examples. 
+@note 
+The well established client and server patterns of the internet/tcp socket
+were implemented here as a proof of concept and as a nucleus to build the
+new abstraction of the 'messaging service' transport.
 
 IConnectod and IListeningPort facilitate creating new Connections. They
 represent a certain pattern of usage of a Connection (they will not be the
@@ -37,34 +46,12 @@ from twisted.python.util import unsignedID
 from twisted.persisted import styles
 
 
+
 class AbstractDescriptor(abstract.FileDescriptor):
     """
-    """
-
-    def __init__(self, reactor, dynamo):
-        abstract.FileDescriptor.__init__(self, reactor)
-        self.dynamo = dynamo
-
-    def startReading(self):
-        """
-        """
-        self.dynamo.addReader(self)
-
-    def startWriting(self):
-        self.dynamo.addWriter(self)
-
-    def stopReading(self):
-        self.dynamo.removeReader(self)
-
-    def stopWriting(self):
-        self.dynamo.removeWriter(self)
-
-
-class XAbstractDescriptor(log.Logger, styles.Ephemeral, object):
-    """
     An abstract superclass of all objects which may be notified when they
-    are readable or writable. This is modeled after
-    twisted.internet.abstract.FileDescriptor, but we are not dealing with
+    are readable or writable. This is modeled after/subclassed from
+    t.i.abstract.FileDescriptor, but we are not dealing with
     file descriptors -- this class is the abstract representation of the
     core new concept provided by the 'messaging service' or messaging
     based Inter Process Communication. The name AbstractDescriptor is
@@ -77,46 +64,15 @@ class XAbstractDescriptor(log.Logger, styles.Ephemeral, object):
     The tcp connection inherits the FileDescriptor class. FileDescriptor is
     an abstract super class of objects that can be notified when they are
     readable or writable -- an object which can be operated on by select().
-
     """
 
-    # implements(interfaces.ITransport)
 
-    connected = 0
-    disconnected = 0
-    disconnecting = 0
 
     def __init__(self, reactor, dynamo):
-        self.reactor = reactor
-        # self.dynamo = dynamo
-
-    def write(self, data):
-        """
-        sockets buffer this, but maybe this doesn't need to...
-        depends on if amqp client is local
-        """
-
-    def writeSequence(self, iovec):
-        """why is it iovec in tcp
-        does messaging need this?
-        """
-        pass
-
-    def loseConnection(self):
-        """
-        """
-        if self.connected and not self.disconnecting:
-            self.stopReading()
-            self.stopWriting()
-
-
-    def connectionLost(self, reason):
-        """
-        """
+        abstract.FileDescriptor.__init__(self, reactor)
+        self.dynamo = dynamo
 
     def startReading(self):
-        """
-        """
         self.dynamo.addReader(self)
 
     def startWriting(self):
@@ -128,23 +84,23 @@ class XAbstractDescriptor(log.Logger, styles.Ephemeral, object):
     def stopWriting(self):
         self.dynamo.removeWriter(self)
 
+    def write(self, data):
+        abstract.FileDescriptor.write(self, data)
 
 
 class Connection(AbstractDescriptor):
     """Messaging Service Connection.
     Connections wrap around the "physical" lower level part of the network.
 
-    Use an AMQP connection to start create a channel.
+    This glues the application protocol to the underlying transport. 
 
-    This is the thing that glues the application protocol to the underlying
-    transport. 
-
-    @todo: This should inherit something with logging and be persistable
+    @todo When/if the time comes, an interface to the 'messaging service'
+    (i.e. IMSTransport, or something to the effect) extending ITransport 
+    could be defined, and this class would be an implementation.
     """
     
     # this is where we get to create IMSTransport, if needed
     # implements(interfaces.ITransport)
-
 
     def __init__(self, pkt, protocol, reactor, dynamo):
         """
@@ -154,24 +110,20 @@ class Connection(AbstractDescriptor):
         self.protocol = protocol
 
     def doRead(self):
-        """this is supposed to get data from mschan and pass to
+        """
+        poll notifies that data is ready to be read
         protocol.dataReceived
         """
         data = self.pocket.recv()
-        print 'do read', data
         self.protocol.dataReceived(data)
 
     def writeSomeData(self, data):
         """
-        bypassing async startWriting/doWrite procedure
-        
-        this is where some intelligence passes application header data
-        separate from undifferentiated application payload
+        This write actually writes on to the pocket.
+        @todo Currently returns len(data), assumes all data is sent. Verify
         """
-        print 'wrtie some data', data
         self.pocket.send(data)
-
-    write = writeSomeData
+        return len(data)
 
     def _closeWriteConnection(self):
         """
@@ -203,7 +155,7 @@ class Connection(AbstractDescriptor):
 class BaseClient(Connection):
     """Base client for MS connections
 
-    does the managment work for mschan
+    does the management work for mschan
     """
 
     def _finishInit(self, whenDone, pkt, error, reactor, dynamo):
@@ -246,8 +198,6 @@ class BaseClient(Connection):
         """
         this is where the application protocol is instantiated
 
-        this is where mschan is configured; the analog to connecting a
-        socket to a host
         """
         status = yield self.pocket.connect(self.realAddress)
         self._connectionDone()
@@ -255,6 +205,7 @@ class BaseClient(Connection):
 
     def _connectionDone(self):
         self.protocol = self.connector.buildProtocol(None)
+        self.connected = 1
         self.logstr = self.protocol.__class__.__name__ + ', client'
         self.startReading()
         self.protocol.makeConnection(self)
@@ -343,7 +294,7 @@ class Server(Connection):
                                         self.sessionno,
                                         str(self.server.listen_address))
 
-        self.startReading() # a Connection responsability
+        self.startReading() # a Connection responsibility
         self.connected = 1
 
     def getHost(self):
@@ -386,10 +337,8 @@ class ListeningPort(BaseListeningPort):
     connected = 0
 
     transport = Server
-    sessionno = 0 # is this needed?
+    sessionno = 0 
     interface = ''
-
-    hack_started = False
 
     def __init__(self, listen_address, factory, backlog=50, interface='',
                                         reactor=None, dynamo=None):
@@ -429,11 +378,8 @@ class ListeningPort(BaseListeningPort):
         @todo skipping error checks, max accepts, etc.
         """
         # try #  implement handeling errors for bad connection requests
-        print 'listen doRead'
         pkt, addr = yield self.pocket.accept()
-        print 'accepted', pkt, addr
         protocol = self.factory.buildProtocol(addr)
-        print 'protocol server made', protocol
         s = self.sessionno
         self.sessionno = s + 1
         # should self.mschan really go in here?
@@ -443,7 +389,7 @@ class ListeningPort(BaseListeningPort):
         protocol.makeConnection(transport)
 
     def loseConnection(self,
-            connDone=failure.Failure(error.ConnectionDone('Conenction Donw'))):
+            connDone=failure.Failure(error.ConnectionDone('Connection Done'))):
         """
         """
         self.disconnecting = True
@@ -507,18 +453,15 @@ class Connector(base.BaseConnector):
 
     def getDestination(self):
         """
-        The address given to the conenctor is a messaging service address
+        The address given to the connector is a messaging service address
         (nothing to do with amqp routing_keys, queue names, or exchange
         names)
 
         What is it? What parts does it need?
 
-        The prototype impementation is a trivial name.
+        The prototype implementation is a trivial name.
         """
         return self.addr
-
-
-
 
 
 

@@ -10,7 +10,7 @@ from twisted.web import server, proxy, resource, static
 from twisted.python import log
 
 from misted.amqp import AMQPClientCreator
-from misted.pocket import PocketDynamo
+from misted.core import PocketReactor
 
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672
@@ -73,7 +73,7 @@ class UtilFactory(protocol.ServerFactory):
         self.util = util
         self.task = task.LoopingCall(self.check_pockets)
         self.pinsts = []
-        self.task.start(1)
+        # self.task.start(1)
 
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
@@ -107,19 +107,18 @@ class MSEchoFactory(protocol.ServerFactory):
 def main(reactor):
     clientCreator = AMQPClientCreator(reactor)
     client = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
-    yield client.authenticate(clientCreator.username,
-            clientCreator.password)
+    # yield client.authenticate(clientCreator.username, clientCreator.password)
 
-    dynamo = PocketDynamo(reactor, client)
+    dynamo = PocketReactor(reactor, client)
 
     # root = static.File('.')
     root = Root()
-    # f = server.Site(proxy.ReverseProxyResource('amoeba.ucsd.edu', 80, ''))
+    f = server.Site(proxy.ReverseProxyResource('amoeba.ucsd.edu', 80, ''))
     # f = server.Site(root)
     # f = MSEchoFactory()
 
     util = Utility(dynamo)
-    f = UtilFactory(util)
+    # f = UtilFactory(util)
 
     dynamo.listenMS(['amq.direct','test-http-server'], f)
     dynamo.run()
