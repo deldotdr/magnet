@@ -84,9 +84,6 @@ class AbstractDescriptor(abstract.FileDescriptor):
     def stopWriting(self):
         self.dynamo.removeWriter(self)
 
-    def write(self, data):
-        abstract.FileDescriptor.write(self, data)
-
 
 class Connection(AbstractDescriptor):
     """Messaging Service Connection.
