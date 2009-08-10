@@ -13,7 +13,6 @@ from misted import mtp
 from misted import pocket
 
 
-
 class PocketReactorCore(object):
     """
     The pocket reactor supporting messaged based Inter Process
@@ -39,14 +38,30 @@ class PocketReactorCore(object):
         self.reactor = reactor
         self.client = client
 
-    
     def pocket(self):
         """pocket instance factory
 
         For prototype, always return new pocket
+        @todo Add args for configuring communication pattern the pocket is
+        to be used for. The way this configuration is determined upstream
+        could be implied by the type of connector/listener (mtp.py) used,
+        or it could be implied in the address/name used when connecting
+        into the messaging service.
         """
         chan = self.client.channel()
-        p = pocket._PocketObject(chan)
+        p = pocket.Bidirectional(chan)
+        p.dynamo = self
+        return p
+
+    def work_consumer_pocket(self):
+        chan = self.client.channel()
+        p = pocket.WorkConsumer(chan)
+        p.dynamo = self
+        return p
+
+    def work_producer_pocket(self):
+        chan = self.client.channel()
+        p = pocket.WorkProducer(chan)
         p.dynamo = self
         return p
 

@@ -29,6 +29,7 @@ class AMQPChannel(AMQChannel):
     def __init__(self, id, outgoing):
         AMQChannel.__init__(self, id, outgoing)
         self.deliver_queue = TimeoutDeferredQueue()
+        self._control_queue = TimeoutDeferredQueue()
         self._basic_deliver_buffer = []
 
 class PocketDelegate(TwistedDelegate):
@@ -51,12 +52,10 @@ class PocketDelegate(TwistedDelegate):
         regular queue (incoming buffer) and the pocket will be notified
         when to read from it.
 
-        @todo plan for handling sycnchronicity of buffering and reading messages.
         """
-        if msg.content.properties['type'] == 'control':
-            ch.deliver_queue.put(msg)
-        else:
-            ch._basic_deliver_buffer.append(msg)
+        # @todo, don't check protocol info here, just pass the message
+        # along to the agreed spot...which is, what?
+        ch.pocket.messageReceived(msg)
 
 
 
@@ -69,8 +68,10 @@ class AMQPClient(AMQClient):
     channelClass = AMQPChannel
 
     def channel(self, id=None):
-        """Overrides AMQClient. Improvements: 
-            1) no need to return deferred.
+        """Overrides AMQClient. Changes: 
+            1) no need to return deferred. The channelLock doesn't protect
+            against any race conditions; the channel reference is returned,
+            so any number of those references could exist already. 
             2) auto channel numbering
             3) replace deferred queue for basic_deliver(s) with simple
                buffer(list)

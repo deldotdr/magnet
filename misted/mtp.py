@@ -181,13 +181,23 @@ class BaseClient(Connection):
         """
         set self.realAddress
         this is passed as addr to the protocol buildProtocol(addr)
+        @note Not sure if there is any need to resolve here. Usually host
+        names are resolved to IP addresses, but there may not be an
+        analogous requirement here.
+
+        @note It could be necessary to further qualify the messaging
+        service address using configuration/context known at runtime.
         """
         yield self.pocket.bind(self.bindAddress)
         self._setRealAddress(self.addr) 
         yield self.doConnect()
 
     def _setRealAddress(self, address):
-        self.realAddress = ['amq.direct',address]
+        """
+        @note There should be no awareness of amqp addresses in this code.
+        """
+        # self.realAddress = ['amq.direct',address]
+        self.realAddress = address
         # yield self.doConnect()
 
     @defer.inlineCallbacks
@@ -362,6 +372,7 @@ class ListeningPort(BaseListeningPort):
         pkt = self.createMessagingPocket()
         yield pkt.bind(self.listen_address)
 
+        log.msg("%s starting on %s" % (self.factory.__class__, str(self.listen_address)))
         # self._realPortNumber ?
         self.factory.doStart()
         pkt.listen()
@@ -369,17 +380,17 @@ class ListeningPort(BaseListeningPort):
         self.pocket = pkt
         self.startReading()
 
-    @defer.inlineCallbacks
+    # @defer.inlineCallbacks
     def doRead(self):
         """
         @todo skipping error checks, max accepts, etc.
         """
         # try #  implement handeling errors for bad connection requests
-        pkt, addr = yield self.pocket.accept()
+        # pkt, addr = yield self.pocket.accept()
+        pkt, addr = self.pocket.accept()
         protocol = self.factory.buildProtocol(addr)
         s = self.sessionno
         self.sessionno = s + 1
-        # should self.mschan really go in here?
         transport = self.transport(pkt, protocol, addr, self, s,
                                     self.reactor, self.dynamo)
         # transport = self._preMakeConnection(transport)
@@ -399,8 +410,7 @@ class ListeningPort(BaseListeningPort):
     stopListening = loseConnection
 
     def connectionLost(self, reason):
-        log.msg('(Messaging Service Listener %s Closed)' %
-                str(self.listen_address))
+        log.msg('(Messaging Service Listener %s Closed)' % str(self.listen_address))
         BaseListeningPort.connectionLost(self, reason)
 
         d = None
@@ -454,7 +464,7 @@ class Connector(base.BaseConnector):
         (nothing to do with amqp routing_keys, queue names, or exchange
         names)
 
-        What is it? What parts does it need?
+        @todo What is it? What parts does it need?
 
         The prototype implementation is a trivial name.
         """

@@ -28,6 +28,13 @@ or .connectSSL.
 The PocketReactor requires a running Twisted reactor and a running txAMQP
 client as init args.
 
+Misted provides two major things:
+ 1) An implementation of core interfaces, defined by Twisted and centered around the interface ITransport, that provides an event driven framework for writing standard Twisted code against, and that utilizes the 2nd major thing:  
+ 2) An object called Pocket that:
+  a) represents the interface to the "messaging service" or "message based transport"
+      pocket:"message transport"::socket:TCP/IP
+  b) completely encapsulates and abstracts AMQP 
+
 @code
 from twisted.internet import defer
 from twisted.internet import reactor
