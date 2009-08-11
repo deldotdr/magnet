@@ -59,6 +59,8 @@ class PocketDelegate(TwistedDelegate):
 
     def basic_return(self, ch, msg):
         """
+        @todo This needs to be implemented, and needs to do something
+        sensible for work producers.
         """
 
 

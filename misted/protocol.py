@@ -29,7 +29,7 @@ class ClientCreator(object):
 
     def connectMS(self, address, timeout=30, bindAddress=None):
         """Connect to remote address (messaging service name), return
-        q Deferred of resulting protocol instance.
+        a Deferred of resulting protocol instance.
         @param address 'Messaging service' remote address (name)
         @param bindAddress 'Messaging service' address (name) to listen on.
         """
@@ -40,10 +40,10 @@ class ClientCreator(object):
 
     def connectWorkConsumer(self, name, timeout=30, bindName=None):
         """
-        Connect to remote address (messaging service name), return
-        q Deferred of resulting protocol instance.
-        @param address 'Messaging service' remote address (name)
-        @param bindAddress 'Messaging service' address (name) to listen on.
+        Distributed work consumer client (worker end of worker-queue
+        pattern)
+        return a Deferred of resulting protocol instance.
+        @param name "Exchange Point/Distributed Topic"
         """
         d = defer.Deferred()
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
@@ -52,10 +52,10 @@ class ClientCreator(object):
 
     def connectWorkProducer(self, name, timeout=30, bindName=None):
         """
-        Connect to remote address (messaging service name), return
-        q Deferred of resulting protocol instance.
-        @param address 'Messaging service' remote address (name)
-        @param bindAddress 'Messaging service' address (name) to listen on.
+        Distributed work producer client (producer end of worker-queue
+        pattern)
+        return a Deferred of resulting protocol instance.
+        @param name "Exchange Point/Distributed Topic"
         """
         d = defer.Deferred()
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)

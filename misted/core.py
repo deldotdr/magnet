@@ -83,16 +83,17 @@ class PocketReactorCore(object):
         return c
 
     def connectWorkConsumer(self, name, factory, timeout=30, bindAddress=None):
-        """Connect a message service client to given message service
-        address.
+        """
+        Configure a worker application to receive messages sent by work
+        produers to @param name.
         """
         c = mtp.WorkConsumerConnector(name, factory, timeout, bindAddress, self.reactor, self)
         c.connect()
         return c
 
     def connectWorkProducer(self, name, factory, timeout=30, bindAddress=None):
-        """Connect a message service client to given message service
-        address.
+        """
+        Send messages to be processed (distributed) to @param name.
         """
         c = mtp.WorkProducerConnector(name, factory, timeout, bindAddress, self.reactor, self)
         c.connect()
