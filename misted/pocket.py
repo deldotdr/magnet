@@ -197,7 +197,6 @@ class Bidirectional(BasePocket):
         connecting.
         """
         pkt = self._connections_to_accept.pop(0)
-        log.msg("accept", pkt)
         return pkt
 
     @defer.inlineCallbacks
@@ -212,7 +211,6 @@ class Bidirectional(BasePocket):
         queue = name
         binding = name
 
-        log.msg('bind')
         yield self.channel.channel_open()
 
         if queue:
@@ -327,7 +325,6 @@ class Bidirectional(BasePocket):
         """
         """
         exchange, routing_key = self.send_exchange, self.send_routing_key
-        log.msg('sendControl', props, exchange, routing_key)
         content = Content(payload, properties=props)
         self.channel.basic_publish(exchange=exchange,
                                     content=content,
@@ -428,7 +425,6 @@ class Bidirectional(BasePocket):
         """
         """
         data = self._recv_buff.pop(0)
-        log.msg("recv", data)
         return data
 
     def read_ready(self):
@@ -452,9 +448,11 @@ class WorkerPatternBase(BasePocket):
         self.last_delivery = None
 
         self.mandatory = True
+        self.immediate = False
         self.can_write = False
 
-        self.pfetch_count = 0
+        self.pfetch_size = 1
+        self.pfetch_count = 1
 
         if debug:
             self.auto_delete = True
@@ -499,8 +497,8 @@ class WorkConsumer(WorkerPatternBase):
         # queue for the channel, which is the last declared queue
         # nowait=False, make sure it works...
         yield self.channel.queue_bind(exchange=name)
-        yield self.channel.basic_qos(prefetch_size=0, prefetch_count=self.pfetch_count)
-        yield self.channel.basic_consume(no_ack=False)
+        yield self.channel.basic_qos(prefetch_count=self.pfetch_count)
+        yield self.channel.basic_consume(queue=name, no_ack=False)
         defer.returnValue(None)
 
     def pocket_app_msg(self, amqp_msg):
@@ -515,7 +513,6 @@ class WorkConsumer(WorkerPatternBase):
         """
         """
         data = self._recv_buff.pop(0)
-        log.msg("recv", data)
         return data
 
     # @defer.inlineCallbacks

@@ -19,7 +19,7 @@ def main(reactor):
     p_reactor = PocketReactor(reactor, client)
 
     pkt = p_reactor.pocket()
-    pkt.delete_name('factorx')
+    pkt.delete_name('factor')
 
     p_reactor.run()
 
