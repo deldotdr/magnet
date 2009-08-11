@@ -1,8 +1,12 @@
+import sys
+import random
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet import protocol
+from twisted.internet import task
 from twisted.protocols import basic
+from twisted.python import log
 
 
 from misted.amqp import AMQPClientCreator
@@ -14,15 +18,19 @@ BROKER_PORT = 5672
 
 log.startLogging(sys.stdout)
 
-class AddClient(basic.LineReceiver):
+class FactorClient(basic.LineReceiver):
 
-    def add(self, a, b):
-        to_send = 'add, %d, %d' % (a, b)
+    def factor(self, n):
+        to_send = str(n)
         self.sendLine(to_send)
 
     def lineReceived(self, line):
-        print 'Result: ', line
+        print 'Received: ', line
 
+
+def factor_int(client, order=55):
+    n = random.randint(2**order, 2**(order+2))
+    client.factor(n)
 
 
 @inlineCallbacks
@@ -36,14 +44,13 @@ def main(reactor):
     p_reactor = PocketReactor(reactor, client)
 
     # ClientCreator for connectMS
-    client_creator = ClientCreator(reactor, p_reactor, AddClient)
-    d = client_creator.connectMS('add-service')
-    add_client = yield d
+    client_creator = ClientCreator(reactor, p_reactor, FactorClient)
+    d = client_creator.connectWorkProducer('factorx')
+    factor_client = yield d
     
-    # use client
-    add_client.add(2, 2)
-    add_client.add(23, 2)
-    add_client.add(1000, 99999)
+
+    l = task.LoopingCall(factor_int, factor_client)
+    l.start(1)
 
     p_reactor.run()
 

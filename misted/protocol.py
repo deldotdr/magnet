@@ -37,3 +37,27 @@ class ClientCreator(object):
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
         self.p_reactor.connectMS(address, f, timeout=timeout, bindAddress=bindAddress)
         return d
+
+    def connectWorkConsumer(self, name, timeout=30, bindName=None):
+        """
+        Connect to remote address (messaging service name), return
+        q Deferred of resulting protocol instance.
+        @param address 'Messaging service' remote address (name)
+        @param bindAddress 'Messaging service' address (name) to listen on.
+        """
+        d = defer.Deferred()
+        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
+        self.p_reactor.connectWorkConsummer(name, f, timeout=timeout, bindAddress=bindName)
+        return d
+
+    def connectWorkProducer(self, name, timeout=30, bindName=None):
+        """
+        Connect to remote address (messaging service name), return
+        q Deferred of resulting protocol instance.
+        @param address 'Messaging service' remote address (name)
+        @param bindAddress 'Messaging service' address (name) to listen on.
+        """
+        d = defer.Deferred()
+        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
+        self.p_reactor.connectWorkProducer(name, f, timeout=timeout, bindAddress=bindName)
+        return d

@@ -15,7 +15,7 @@ visible or accessible out side of the pocket.
 """
 
 
-from zope.interfaces import implements
+from zope.interface import implements
 
 from twisted.python import log
 from twisted.internet import defer
@@ -34,6 +34,11 @@ class BasePocket(object, log.Logger):
         """
         channel.pocket = self
         self.channel = channel
+
+        self._recv_buff = []
+
+        self.send_exchange = ''
+        self.send_routing_key = ''
 
         self.immediate = False
         self.mandatory = False
@@ -85,19 +90,21 @@ class BasePocket(object, log.Logger):
         """
         Send data as a message to remote name.
         """
+        self.sendMessage(data)
 
     # # # # # # # # # # # # # # # # # # # # # # # 
     # 
     def messageReceived(self, msg):
         """txAMQP delegate calls this
         """
-        if not msg.content.properties.hasattr('type'):
+        log.msg('messageReceived', msg.content.properties)
+        if not msg.content.properties.has_key('type'):
+            log.msg('Message has no control type!')
             raise KeyError('Message has no control type!')
-
         control_method = msg.content.properties['type']
-        if not hasattr('pocket_%s' % control_method):
+        if not hasattr(self, 'pocket_%s' % control_method):
             raise KeyError("%s is NOT a Pocket Transport Control Method" % control_method)
-        getattr('pocket_%s' % control_method)(msg)
+        getattr(self, 'pocket_%s' % control_method)(msg)
 
     def sendMessage(self, payload, props={}):
         """
@@ -108,6 +115,7 @@ class BasePocket(object, log.Logger):
           - immediate, detect lost peer
           - mandatory, make sure msg is routed to a queue
         """
+        log.msg('sendMessage', payload)
         props.update({'type':'app_msg'}) 
         content = Content(payload, properties=props)
         self.channel.basic_publish(exchange=self.send_exchange,
@@ -116,12 +124,25 @@ class BasePocket(object, log.Logger):
                                     immediate=self.immediate,
                                     mandatory=self.mandatory)
 
+    def _set_send_address(self, exchange, routing_key):
+        """
+        """
+        self.send_exchange = exchange
+        self.send_routing_key = routing_key
+
+    def _set_receive_address(self, exchange, binding, queue):
+        """
+        """
+        self.recv_exchange = exchange
+        self.recv_binding = binding
+        self.recv_queue = queue
+
     def pocket_app_msg(self, amqp_msg):
         """
         @todo Check amqp headers. See if deliver ack is needed.
         """
         data = amqp_msg.content.body
-        self._recv_queue.put(data)
+        self._recv_buff.append(data)
 
     def read_ready(self):
         """If True, the poll will indicate this pocket ready for doRead.
@@ -131,6 +152,7 @@ class BasePocket(object, log.Logger):
     def write_ready(self):
         """If True, the poll will indicate this pocket ready for doWrite.
         """
+        return True
 
 class Bidirectional(BasePocket):
     """
@@ -148,11 +170,11 @@ class Bidirectional(BasePocket):
         BasePocket.__init__(self, channel)
         self.logstr = self.__class__.__name__
 
-        self._recv_queue = defer.DeferredQueue()
+        self._connections_to_accept = []
+
+        self.can_write = False
 
         # publish configuration
-        self.send_exchange = ''
-        self.send_routing_key = ''
         self.immediate = True
         self.mandatory = True
 
@@ -164,6 +186,7 @@ class Bidirectional(BasePocket):
         connecting.
         """
         pkt = self._connections_to_accept.pop(0)
+        log.msg("accept", pkt)
         return pkt
 
     @defer.inlineCallbacks
@@ -178,18 +201,21 @@ class Bidirectional(BasePocket):
         queue = name
         binding = name
 
+        log.msg('bind')
         yield self.channel.channel_open()
 
         if queue:
             yield self.channel.queue_declare(queue=queue, exclusive=True)
         else:
-            reply = yield self.channel.queue_declare(auto_delete=True)
+            reply = yield self.channel.queue_declare(auto_delete=True, exclusive=True)
+            queue = reply.queue
 
         if binding:
             yield self.channel.queue_bind(exchange=exchange, routing_key=binding)
             # need to set what ended up being the queue name for replys
         else:
             yield self.channel.queue_bind(exchange=exchange)
+            binding = queue
 
         self._set_receive_address(exchange, binding, queue)
         defer.returnValue(None)
@@ -261,6 +287,8 @@ class Bidirectional(BasePocket):
         """
         self._set_send_address(exchange, routing_key)
 
+        yield self.channel.channel_open()
+
         reply = yield self.channel.queue_declare(auto_delete=True, exclusive=True)
         yield self.channel.queue_bind(exchange=exchange)
 
@@ -272,6 +300,12 @@ class Bidirectional(BasePocket):
         yield self.channel.basic_consume()
         defer.returnValue(None)
 
+    
+    @defer.inlineCallbacks
+    def listen(self):
+        """
+        """
+        yield self.channel.basic_consume()
 
 
     # # # # # # # # # # # # # # # # # # # # # #  
@@ -281,7 +315,8 @@ class Bidirectional(BasePocket):
     def sendControl(self, payload='', props=None):
         """
         """
-        exchange, routing_key = self.dest_amqp_exchange, self.dest_amqp_routing_key
+        exchange, routing_key = self.send_exchange, self.send_routing_key
+        log.msg('sendControl', props, exchange, routing_key)
         content = Content(payload, properties=props)
         self.channel.basic_publish(exchange=exchange,
                                     content=content,
@@ -361,6 +396,7 @@ class Bidirectional(BasePocket):
         props['type'] = 'started'
         self.started = True
         self.sendControl(props=props)
+        self.can_write = True
 
     def pocket_started(self, msg):
         """
@@ -370,7 +406,8 @@ class Bidirectional(BasePocket):
         """
         self.started = True
         # put something in recv queue to trigger accept by server
-        self._recv_queue.put()
+        # self._recv_buff.append()
+        self.can_write = True
     
     # 
     # End connection establishment protocol 
@@ -379,20 +416,40 @@ class Bidirectional(BasePocket):
     def recv(self):
         """
         """
-        return self._recv_buff.pop(0)
+        data = self._recv_buff.pop(0)
+        log.msg("recv", data)
+        return data
 
     def read_ready(self):
         """If True, the poll will indicate this pocket ready for doRead.
         """
         return bool(len(self._recv_buff)) or bool(len(self._connections_to_accept))
 
-class WorkConsumer(MessageProtocol):
+    def write_ready(self):
+        return self.can_write
+
+class WorkConsumer(BasePocket):
     """
     @note AMQP configuration:
     - bind to shared queue (pre determined name)
     - set qos to one message per deliver
     - ack deliver *only* when work is done
     """
+
+    def __init__(self, channel):
+        BasePocket.__init__(self, channel)
+        self.logstr = self.__class__.__name__
+
+        self.last_delivery = None
+
+    @defer.inlineCallbacks
+    def bind(self, name):
+        """Hack to minimize changes to BaseClient..it expects this to be
+        deferred.
+        """
+        yield self.channel.channel_open()
+        defer.returnValue(None)
+
 
     @defer.inlineCallbacks
     def connect(self, name):
@@ -402,7 +459,6 @@ class WorkConsumer(MessageProtocol):
         worker is active, it is necessary, however, for this
         general procedure to always config the queue.
         """
-        yield self.channel.channel_open()
         yield self.channel.queue_declare(queue=name, auto_delete=False)
         yield self.channel.exchange_declare(exchange=name, 
                                         type='topic',
@@ -412,17 +468,49 @@ class WorkConsumer(MessageProtocol):
         # queue for the channel, which is the last declared queue
         # nowait=False, make sure it works...
         yield self.channel.queue_bind(exchange=name, nowait=False)
-        yield self.channel.basic_qos(prefetch_size=0, prefetch_count=0, a_global=False)
+        yield self.channel.basic_qos(prefetch_size=0, prefetch_count=0)
+        yield self.channel.basic_consume()
         defer.returnValue(None)
 
+    def pocket_app_msg(self, amqp_msg):
+        """
+        @todo Check amqp headers. See if deliver ack is needed.
+        """
+        data = amqp_msg.content.body
+        self.last_delivery = amqp_msg.delivery_tag
+        self._recv_buff.append(data)
 
-class WorkProducer(MessageProtocol):
+    # @defer.inlineCallbacks
+    def ack(self):
+        """Basic ack prototype
+        """
+        if self.last_delivery:
+            self.channel.basic_ack(delivery_tag=self.last_delivery)
+            self.last_delivery = None
+
+
+class WorkProducer(BasePocket):
     """Send all messages to a name.
     The name represents a shared queue.
     The pocket should verify published messages are queued by waiting for
     the queue to ack. It will then be the responsibility of the queue to
     ensure the message is processed by a worker.
     """
+
+    def __init__(self, channel):
+        BasePocket.__init__(self, channel)
+        self.logstr = self.__class__.__name__
+
+        self.mandatory = True
+        self.can_write = False
+
+    @defer.inlineCallbacks
+    def bind(self, name):
+        """Hack to minimize changes to BaseClient..it expects this to be
+        deferred.
+        """
+        yield self.channel.channel_open()
+        defer.returnValue(None)
 
     @defer.inlineCallbacks
     def connect(self, name):
@@ -435,7 +523,7 @@ class WorkProducer(MessageProtocol):
         @todo Introduce another element in the system responsible for this
         configuration.
         """
-        yield self.channel.channel_open()
+        self._set_send_address(name, name)
         yield self.channel.queue_declare(queue=name, auto_delete=False)
         yield self.channel.exchange_declare(exchange=name, 
                                         type='topic',
@@ -445,16 +533,9 @@ class WorkProducer(MessageProtocol):
         # queue for the channel, which is the last declared queue
         # nowait=False, make sure it works...
         yield self.channel.queue_bind(exchange=name, nowait=False)
-        yield self.channel.basic_qos(prefetch_size=0, prefetch_count=0, a_global=False)
+        self.can_write = True
         defer.returnValue(None)
 
-    def _send(self, data):
-        """piece of work...
-        """
-
-        self.channel.basic_publish(exchange=exchange,
-                                    content=content,
-                                    routing_key=routing_key)
-
-
+    def write_ready(self):
+        return self.can_write
 

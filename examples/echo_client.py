@@ -1,9 +1,12 @@
+import sys
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet import protocol
 from twisted.protocols import basic
 from twisted.python import log
+
+log.startLogging(sys.stdout)
 
 from misted.amqp import AMQPClientCreator
 from misted.core import PocketReactor

@@ -1,8 +1,11 @@
+import sys
 
 from twisted.internet import reactor
 from twisted.internet import protocol
 from twisted.internet.defer import inlineCallbacks
 from twisted.python import log
+
+log.startLogging(sys.stdout)
 
 from misted.amqp import AMQPClientCreator
 from misted.core import PocketReactor
@@ -31,7 +34,7 @@ def main(reactor):
 
     f = EchoFactory()
 
-    p_reactor.listenMS(['amq.direct','echo-server'], f)
+    p_reactor.listenMS('echo-server', f)
     p_reactor.run()
 
 if __name__ == '__main__':

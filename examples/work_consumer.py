@@ -1,3 +1,6 @@
+import sys
+
+from sympy import factorint
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
@@ -15,26 +18,28 @@ from misted.core import PocketReactor
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672
 
+log.startLogging(sys.stdout)
 
-
-class AddProtocol(basic.LineReceiver):
+class Factor(basic.LineReceiver):
 
     def lineReceived(self, line):
-        print self, self.transport, 'Add request: ', line
-        if line[0:3] == 'add':
-            _, a, b = line.split(',')
-            c = self.add(int(a), int(b))
-            self.sendLine(str(c))
+        try:
+            self.factor(line)
+        except:
+            log.err('Factor error')
+            return
+        self.transport.ack()
 
-    def add(self, a, b):
+    def factor(self, n):
         """Simple example of specific protocol functionality
         """
-        return a + b
+        log.msg('Factor ', n)
+        f = sympy.factorint(long(n))
+        log.msg('Factors: ', str(f))
+        return 
 
-class AddFactory(protocol.ServerFactory):
-    protocol = AddProtocol
-
-
+class FactorFactory(protocol.ClientFactory):
+    protocol = Factor
 
 @inlineCallbacks
 def main(reactor):
@@ -43,9 +48,9 @@ def main(reactor):
 
     p_reactor = PocketReactor(reactor, client)
 
-    f = AddFactory()
+    f = FactorFactory()
 
-    p_reactor.listenMS('add-service', f)
+    p_reactor.connectWorkConsumer('factorx', f)
     p_reactor.run()
 
 if __name__ == '__main__':

@@ -470,6 +470,32 @@ class Connector(base.BaseConnector):
         """
         return self.addr
 
+class WorkConsumerClient(Client):
 
+    def createMessagingPocket(self):
+        """
+        make an instance of AbstractMessageChannel, passing it a active
+        msgsrv object
+        """
+        pkt = self.dynamo.work_consumer_pocket()
+        return pkt
+
+class WorkConsumerConnector(Connector):
+    def _makeTransport(self):
+        return WorkConsumerClient(self.addr, self.bindAddress, self, self.reactor, self.dynamo)
+
+class WorkProducerClient(Client):
+
+    def createMessagingPocket(self):
+        """
+        make an instance of AbstractMessageChannel, passing it a active
+        msgsrv object
+        """
+        pkt = self.dynamo.work_producer_pocket()
+        return pkt
+
+class WorkProducerConnector(Connector):
+    def _makeTransport(self):
+        return WorkProducerClient(self.addr, self.bindAddress, self, self.reactor, self.dynamo)
 
 
