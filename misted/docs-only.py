@@ -14,7 +14,7 @@ warning, is the Shiny! New! Way! to use AMQP from OOI code. It provides a
 twisted-compatible connection abstraction based on 'pockets', which are one
 letter different from sockets.
 
-@section Basic Usage
+@section basic Basic Usage
 Pocket connections need a special reactor, the PocketReactor.
 
 The PocketReactor is the main thing an application developer will use.
@@ -27,6 +27,9 @@ or .connectSSL.
 
 The PocketReactor requires a running Twisted reactor and a running txAMQP
 client as init args.
+@section Notes
+
+Much more docs on the way, keep an eye out at http://amoeba.ucsd.edu/doxygen/Misted
 
 Misted provides two major things:
  1) An implementation of core interfaces, defined by Twisted and centered around the interface ITransport, that provides an event driven framework for writing standard Twisted code against, and that utilizes the 2nd major thing:  
@@ -35,6 +38,7 @@ Misted provides two major things:
       pocket:"message transport"::socket:TCP/IP
   b) completely encapsulates and abstracts AMQP 
 
+@section code Sample code
 @code
 from twisted.internet import defer
 from twisted.internet import reactor
@@ -53,9 +57,10 @@ def startup():
     client_factory = ClientFactory()
     p_reactor.connectMS(address, client_factory)
 
-@section Notes
+@endcode
 
-Much more docs on the way, keep an eye out at http://amoeba.ucsd.edu/doxygen/Misted
+For more complete sample code, see add_client.py, add_server.py and the others in
+the examples directory.
 """
 
 import os
