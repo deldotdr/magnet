@@ -29,7 +29,7 @@ class BasePocket(object, log.Logger):
 
     implements(ILoggingContext)
 
-    def __init__(self, channel):
+    def __init__(self, channel, debug=False):
         """
         """
         channel.pocket = self
@@ -153,6 +153,17 @@ class BasePocket(object, log.Logger):
         """If True, the poll will indicate this pocket ready for doWrite.
         """
         return True
+
+    @defer.inlineCallbacks
+    def purge_name(self, name):
+        yield self.channel.channel_open()
+        yield self.channel.queue_purge(queue=name)
+
+    @defer.inlineCallbacks
+    def delete_name(self, name):
+        yield self.channel.channel_open()
+        yield self.channel.queue_delete(queue=name, if_unused=False, if_empty=False)
+        yield self.channel.exchange_delete(exchange=name)
 
 class Bidirectional(BasePocket):
     """
@@ -428,7 +439,32 @@ class Bidirectional(BasePocket):
     def write_ready(self):
         return self.can_write
 
-class WorkConsumer(BasePocket):
+class WorkerPatternBase(BasePocket):
+    """
+    Mixin, most useful for toggling development mode of amqp worker queue
+    parameters.
+    """
+
+    def __init__(self, channel, debug=False):
+        BasePocket.__init__(self, channel, debug)
+        self.logstr = self.__class__.__name__
+
+        self.last_delivery = None
+
+        self.mandatory = True
+        self.can_write = False
+
+        self.pfetch_count = 0
+
+        if debug:
+            self.auto_delete = True
+            self.durable = False
+        else:
+            self.auto_delete = False
+            self.durable = True
+
+
+class WorkConsumer(WorkerPatternBase):
     """
     @note AMQP configuration:
     - bind to shared queue (pre determined name)
@@ -436,11 +472,6 @@ class WorkConsumer(BasePocket):
     - ack deliver *only* when work is done
     """
 
-    def __init__(self, channel):
-        BasePocket.__init__(self, channel)
-        self.logstr = self.__class__.__name__
-
-        self.last_delivery = None
 
     @defer.inlineCallbacks
     def bind(self, name):
@@ -459,17 +490,17 @@ class WorkConsumer(BasePocket):
         worker is active, it is necessary, however, for this
         general procedure to always config the queue.
         """
-        yield self.channel.queue_declare(queue=name, auto_delete=False)
+        yield self.channel.queue_declare(queue=name, auto_delete=self.auto_delete)
         yield self.channel.exchange_declare(exchange=name, 
                                         type='topic',
-                                        durable=True,
-                                        auto_delete=False)
+                                        durable=self.durable,
+                                        auto_delete=self.auto_delete)
         # If queue and routing key empty, routing key will be the current
         # queue for the channel, which is the last declared queue
         # nowait=False, make sure it works...
-        yield self.channel.queue_bind(exchange=name, nowait=False)
-        yield self.channel.basic_qos(prefetch_size=0, prefetch_count=0)
-        yield self.channel.basic_consume()
+        yield self.channel.queue_bind(exchange=name)
+        yield self.channel.basic_qos(prefetch_size=0, prefetch_count=self.pfetch_count)
+        yield self.channel.basic_consume(no_ack=False)
         defer.returnValue(None)
 
     def pocket_app_msg(self, amqp_msg):
@@ -480,6 +511,13 @@ class WorkConsumer(BasePocket):
         self.last_delivery = amqp_msg.delivery_tag
         self._recv_buff.append(data)
 
+    def recv(self):
+        """
+        """
+        data = self._recv_buff.pop(0)
+        log.msg("recv", data)
+        return data
+
     # @defer.inlineCallbacks
     def ack(self):
         """Basic ack prototype
@@ -489,7 +527,7 @@ class WorkConsumer(BasePocket):
             self.last_delivery = None
 
 
-class WorkProducer(BasePocket):
+class WorkProducer(WorkerPatternBase):
     """Send all messages to a name.
     The name represents a shared queue.
     The pocket should verify published messages are queued by waiting for
@@ -497,12 +535,6 @@ class WorkProducer(BasePocket):
     ensure the message is processed by a worker.
     """
 
-    def __init__(self, channel):
-        BasePocket.__init__(self, channel)
-        self.logstr = self.__class__.__name__
-
-        self.mandatory = True
-        self.can_write = False
 
     @defer.inlineCallbacks
     def bind(self, name):
@@ -524,15 +556,15 @@ class WorkProducer(BasePocket):
         configuration.
         """
         self._set_send_address(name, name)
-        yield self.channel.queue_declare(queue=name, auto_delete=False)
+        yield self.channel.queue_declare(queue=name, auto_delete=self.auto_delete)
         yield self.channel.exchange_declare(exchange=name, 
                                         type='topic',
-                                        durable=True,
-                                        auto_delete=False)
+                                        durable=self.durable,
+                                        auto_delete=self.auto_delete)
         # If queue and routing key empty, routing key will be the current
         # queue for the channel, which is the last declared queue
         # nowait=False, make sure it works...
-        yield self.channel.queue_bind(exchange=name, nowait=False)
+        yield self.channel.queue_bind(exchange=name)
         self.can_write = True
         defer.returnValue(None)
 

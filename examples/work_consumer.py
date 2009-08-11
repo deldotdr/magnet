@@ -8,8 +8,6 @@ from twisted.internet import protocol
 from twisted.protocols import basic
 from twisted.internet import task
 
-from twisted.web.client import HTTPClientFactory
-from twisted.web import server, proxy, resource, static
 from twisted.python import log
 
 from misted.amqp import AMQPClientCreator
@@ -34,7 +32,7 @@ class Factor(basic.LineReceiver):
         """Simple example of specific protocol functionality
         """
         log.msg('Factor ', n)
-        f = sympy.factorint(long(n))
+        f = factorint(long(n))
         log.msg('Factors: ', str(f))
         return 
 
@@ -50,7 +48,7 @@ def main(reactor):
 
     f = FactorFactory()
 
-    p_reactor.connectWorkConsumer('factorx', f)
+    p_reactor.connectWorkConsumer('factor', f)
     p_reactor.run()
 
 if __name__ == '__main__':

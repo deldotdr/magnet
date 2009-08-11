@@ -45,12 +45,12 @@ def main(reactor):
 
     # ClientCreator for connectMS
     client_creator = ClientCreator(reactor, p_reactor, FactorClient)
-    d = client_creator.connectWorkProducer('factorx')
+    d = client_creator.connectWorkProducer('factor')
     factor_client = yield d
     
 
     l = task.LoopingCall(factor_int, factor_client)
-    l.start(1)
+    l.start(3)
 
     p_reactor.run()
 

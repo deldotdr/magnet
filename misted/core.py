@@ -31,12 +31,14 @@ class PocketReactorCore(object):
     client.
     """
 
-    def __init__(self, reactor, client):
+    def __init__(self, reactor, client, debug=False):
         """the client attribute of the messaging service core is the amqp
         client instance, (connected and running)
         """
         self.reactor = reactor
         self.client = client
+
+        self.debug = debug
 
     def pocket(self):
         """pocket instance factory
@@ -55,13 +57,13 @@ class PocketReactorCore(object):
 
     def work_consumer_pocket(self):
         chan = self.client.channel()
-        p = pocket.WorkConsumer(chan)
+        p = pocket.WorkConsumer(chan, self.debug)
         p.dynamo = self
         return p
 
     def work_producer_pocket(self):
         chan = self.client.channel()
-        p = pocket.WorkProducer(chan)
+        p = pocket.WorkProducer(chan, self.debug)
         p.dynamo = self
         return p
 
@@ -122,11 +124,11 @@ class PocketReactor(PocketReactorCore):
     @todo  or a cooperator service
     """
 
-    def __init__(self, reactor, client):
+    def __init__(self, reactor, client, debug=False):
         """
         readers and writers are pocket obects
         """
-        PocketReactorCore.__init__(self, reactor, client)
+        PocketReactorCore.__init__(self, reactor, client, debug)
         self._readers = {}
         self._writers = {}
         self.loop = task.LoopingCall(self.doIteration)

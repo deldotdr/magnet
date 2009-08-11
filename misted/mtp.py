@@ -480,6 +480,12 @@ class WorkConsumerClient(Client):
         pkt = self.dynamo.work_consumer_pocket()
         return pkt
 
+    def ack(self):
+        """
+        Prototype for acknowledging work message was successfully processed.
+        """
+        self.pocket.ack()
+
 class WorkConsumerConnector(Connector):
     def _makeTransport(self):
         return WorkConsumerClient(self.addr, self.bindAddress, self, self.reactor, self.dynamo)

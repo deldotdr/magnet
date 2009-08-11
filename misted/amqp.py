@@ -57,6 +57,9 @@ class PocketDelegate(TwistedDelegate):
         # along to the agreed spot...which is, what?
         ch.pocket.messageReceived(msg)
 
+    def basic_return(self, ch, msg):
+        """
+        """
 
 
 class AMQPClient(AMQClient):
