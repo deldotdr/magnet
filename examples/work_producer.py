@@ -14,23 +14,34 @@ from misted.core import PocketReactor
 from misted.protocol import ClientCreator
 
 BROKER_HOST = 'amoeba.ucsd.edu'
+BROKER_HOST = 'localhost'
 BROKER_PORT = 5672
 
 log.startLogging(sys.stdout)
 
 class FactorClient(basic.LineReceiver):
+    def __init__(self):
+        self.count = 0
 
     def factor(self, n):
         to_send = str(n)
+        self.sendLine(to_send)
+
+    def sleep(self, t):
+        to_send = str(t)
         self.sendLine(to_send)
 
     def lineReceived(self, line):
         print 'Received: ', line
 
 
-def factor_int(client, order=55):
+def factor_int(client, order=155):
     n = random.randint(2**order, 2**(order+2))
     client.factor(n)
+
+def sleep_time(client):
+    t = random.randint(1, 5)
+    client.sleep(t)
 
 
 @inlineCallbacks
@@ -49,8 +60,9 @@ def main(reactor):
     factor_client = yield d
     
 
-    l = task.LoopingCall(factor_int, factor_client)
-    l.start(3)
+    # l = task.LoopingCall(factor_int, factor_client)
+    l = task.LoopingCall(sleep_time, factor_client)
+    l.start(1)
 
     p_reactor.run()
 
