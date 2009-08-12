@@ -1,6 +1,10 @@
+import sys
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
+from twisted.python import log
+
+log.startLogging(sys.stdout)
 
 from twisted.web.client import HTTPClientFactory
 

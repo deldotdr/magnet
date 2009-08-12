@@ -1,0 +1,1 @@
+git archive --format=tar --prefix=misted/ HEAD | gzip > misted-latest.tar.gz

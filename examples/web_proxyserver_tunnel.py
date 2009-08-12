@@ -1,3 +1,4 @@
+import sys
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
@@ -11,6 +12,7 @@ from magnet.core import PocketReactor
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672
 
+log.startLogging(sys.stdout)
 
 @inlineCallbacks
 def main(reactor):

@@ -1,4 +1,5 @@
 import sys
+import time
 
 from sympy import factorint
 
@@ -14,6 +15,7 @@ from magnet.amqp import AMQPClientCreator
 from magnet.core import PocketReactor
 
 BROKER_HOST = 'amoeba.ucsd.edu'
+BROKER_HOST = 'localhost'
 BROKER_PORT = 5672
 
 log.startLogging(sys.stdout)
@@ -22,7 +24,8 @@ class Factor(basic.LineReceiver):
 
     def lineReceived(self, line):
         try:
-            self.factor(line)
+            # self.factor(line)
+            self.sleep(line)
         except:
             log.err('Factor error')
             return
@@ -35,6 +38,11 @@ class Factor(basic.LineReceiver):
         f = factorint(long(n))
         log.msg('Factors: ', str(f))
         return 
+
+    def sleep(self, t):
+        log.msg("Sleep ", int(t))
+        time.sleep(int(t))
+        return
 
 class FactorFactory(protocol.ClientFactory):
     protocol = Factor

@@ -8,6 +8,7 @@ from magnet.core import PocketReactor
 
 
 BROKER_HOST = 'amoeba.ucsd.edu'
+BROKER_HOST = 'localhost'
 BROKER_PORT = 5672
 
 
