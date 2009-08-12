@@ -2,16 +2,13 @@
 
 from distutils.core import setup
 
-setup(name='magnet',
+setup(name='misted',
         version='0.2.0',
-        description='Interacting Message Agents over AMQP',
+        description='',
         author='Dorian Raymer', 
         author_email='deldotdr@gmail.com',
-        packages=['magnet', 'twisted'],
+        packages=['misted'],
         package_data={
-            'magnet':['spec/*.xml'],
-            'twisted':[
-                'plugins/magnet_plugin.py'
-                ]
+            'misted':['spec/*.xml'],
             }
         )
