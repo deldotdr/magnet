@@ -9,8 +9,8 @@ from twisted.internet import defer
 from twisted.internet import task
 from twisted.python import log
 
-from misted import mtp
-from misted import pocket
+from magnet import mtp
+from magnet import pocket
 
 
 class PocketReactorCore(object):

@@ -5,9 +5,9 @@ from twisted.internet import protocol
 from twisted.protocols import basic
 
 
-from misted.amqp import AMQPClientCreator
-from misted.core import PocketReactor
-from misted.protocol import ClientCreator
+from magnet.amqp import AMQPClientCreator
+from magnet.core import PocketReactor
+from magnet.protocol import ClientCreator
 
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672

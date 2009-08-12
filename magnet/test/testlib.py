@@ -31,8 +31,8 @@ from twisted.internet.defer import inlineCallbacks, Deferred, returnValue, Defer
 from twisted.python import failure
 from txamqp.queue import Empty
 
-from misted.amqp import AMQPClientCreator
-from misted.river import MessageService
+from magnet.amqp import AMQPClientCreator
+from magnet.river import MessageService
 
 RABBITMQ = "RABBITMQ"
 OPENAMQ = "OPENAMQ"

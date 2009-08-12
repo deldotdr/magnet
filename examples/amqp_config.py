@@ -1,7 +1,7 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from misted.amqp import AMQPClientCreator
+from magnet.amqp import AMQPClientCreator
 
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672

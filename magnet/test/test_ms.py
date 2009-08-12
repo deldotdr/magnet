@@ -13,9 +13,9 @@ from txamqp.client import Closed
 from txamqp.queue import Empty
 from txamqp.content import Content
 
-from misted.amqp import AMQPClientCreator
-from misted.river import MessageService
-from misted import fog
+from magnet.amqp import AMQPClientCreator
+from magnet.river import MessageService
+from magnet import fog
 
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672

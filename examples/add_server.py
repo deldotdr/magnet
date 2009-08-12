@@ -9,8 +9,8 @@ from twisted.web.client import HTTPClientFactory
 from twisted.web import server, proxy, resource, static
 from twisted.python import log
 
-from misted.amqp import AMQPClientCreator
-from misted.core import PocketReactor
+from magnet.amqp import AMQPClientCreator
+from magnet.core import PocketReactor
 
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672

@@ -5,14 +5,13 @@
 @author Dorian Raymer
 @author pfh
 @date 7/9/09
-@brief Docs for Misted
+@brief Docs for Magnet
 
 
 @mainpage
-Welcome to Misted, the successor to Magnet. Misted, whose name may change without
-warning, is the Shiny! New! Way! to use AMQP from OOI code. It provides a
-twisted-compatible connection abstraction based on 'pockets', which are one
-letter different from sockets.
+Welcome to Magnet, the way to use AMQP from OOI code. 
+It provides a twisted-compatible connection abstraction based on 
+'pockets', which are one letter different from sockets.
 
 @section basic Basic Usage
 Pocket connections need a special reactor, the PocketReactor.
@@ -29,9 +28,9 @@ The PocketReactor requires a running Twisted reactor and a running txAMQP
 client as init args.
 @section Notes
 
-Much more docs on the way, keep an eye out at http://amoeba.ucsd.edu/doxygen/Misted
+Much more docs on the way, keep an eye out at http://amoeba.ucsd.edu/doxygen/Magnet
 
-Misted provides two major things:
+Magnet provides two major things:
  1) An implementation of core interfaces, defined by Twisted and centered around the interface ITransport, that provides an event driven framework for writing standard Twisted code against, and that utilizes the 2nd major thing:  
  2) An object called Pocket that:
   a) represents the interface to the "messaging service" or "message based transport"
@@ -42,8 +41,8 @@ Misted provides two major things:
 @code
 from twisted.internet import defer
 from twisted.internet import reactor
-from misted import amqp
-from misted import core
+from magnet import amqp
+from magnet import core
 
 @defer.inlineCallbacks
 def startup():

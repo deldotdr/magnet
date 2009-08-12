@@ -17,9 +17,9 @@ from twisted.python import log
 from twisted.internet import defer
 from twisted.internet import protocol
 
-import misted
+import magnet
 # Spec file is loaded from the egg bundle. Hard code 0-8 for now...
-spec_path_def = os.path.join(misted.__path__[0], 'spec', 'amqp0-8.xml')
+spec_path_def = os.path.join(magnet.__path__[0], 'spec', 'amqp0-8.xml')
 
 class AMQPChannel(AMQChannel):
     """

@@ -3,8 +3,8 @@ from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 
 
-from misted.amqp import AMQPClientCreator
-from misted.core import PocketReactor
+from magnet.amqp import AMQPClientCreator
+from magnet.core import PocketReactor
 
 
 BROKER_HOST = 'amoeba.ucsd.edu'
