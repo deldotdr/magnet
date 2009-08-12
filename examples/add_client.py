@@ -1,7 +1,9 @@
+import sys
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet import protocol
+from twisted.python import log
 from twisted.protocols import basic
 
 
