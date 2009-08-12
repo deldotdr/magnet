@@ -23,7 +23,7 @@ def main(reactor):
 
     f = server.Site(proxy.ReverseProxyResource('amoeba.ucsd.edu', 80, ''))
 
-    p_reactor.listenMS(['amq.direct','test-http-server'], f)
+    p_reactor.listenMS('test-http-server', f)
     p_reactor.run()
 
 if __name__ == '__main__':
