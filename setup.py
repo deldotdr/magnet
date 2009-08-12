@@ -2,13 +2,13 @@
 
 from distutils.core import setup
 
-setup(name='misted',
+setup(name='magnet',
         version='0.2.0',
         description='',
         author='Dorian Raymer', 
         author_email='deldotdr@gmail.com',
-        packages=['misted'],
+        packages=['magnet'],
         package_data={
-            'misted':['spec/*.xml'],
+            'magnet':['spec/*.xml'],
             }
         )
