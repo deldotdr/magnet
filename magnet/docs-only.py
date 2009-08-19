@@ -41,20 +41,17 @@ Magnet provides two major things:
 @code
 from twisted.internet import defer
 from twisted.internet import reactor
-from magnet import amqp
-from magnet import core
 
 @defer.inlineCallbacks
 def startup():
-    clientCreator = amqp.AMQPClientCreator(reactor)
-    client = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
+    from magnet.preactor import Preactor
+    preactor = yield Preactor()
 
-    p_reactor = core.PocketReactor(reactor, client)
     server_factory = ServerFactory()
-    p_reactor.listenMS(bindAddress, server_factory)
+    preactor.listenMS(name, server_factory)
 
     client_factory = ClientFactory()
-    p_reactor.connectMS(address, client_factory)
+    preactor.connectMS(name, client_factory)
 
 @endcode
 
