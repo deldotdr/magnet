@@ -3,6 +3,8 @@ import time
 
 from sympy import factorint
 
+from twisted.application import internet
+from twisted.application import service
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet import protocol
@@ -12,7 +14,7 @@ from twisted.internet import task
 from twisted.python import log
 
 
-log.startLogging(sys.stdout)
+# log.startLogging(sys.stdout)
 
 class Factor(basic.LineReceiver):
 
@@ -41,16 +43,16 @@ class Factor(basic.LineReceiver):
 class FactorFactory(protocol.ClientFactory):
     protocol = Factor
 
+
 @inlineCallbacks
 def main():
     from magnet.preactor import Preactor
-    preactor = Preactor()
+    preactor = yield Preactor()
 
     f = FactorFactory()
 
     preactor.connectWorkConsumer('factor', f)
     preactor.run()
 
-if __name__ == '__main__':
-    main()
-    reactor.run()
+application = service.Application('worker')
+main()

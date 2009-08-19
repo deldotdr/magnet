@@ -70,7 +70,7 @@ class PocketReactorCore(object):
         """Connects given factory to the given message service address.
         """
         p = mtp.ListeningPort(addr, factory, reactor=self.reactor, dynamo=self)
-        p.startListening()
+        self.reactor.callWhenRunning(p.startListening)
         return p
 
     def connectMS(self, addr, factory, timeout=30, bindAddress=None):
@@ -78,7 +78,7 @@ class PocketReactorCore(object):
         address.
         """
         c = mtp.Connector(addr, factory, timeout, bindAddress, self.reactor, self)
-        c.connect()
+        self.reactor.callWhenRunning(c.connect)
         return c
 
     def connectWorkConsumer(self, name, factory, timeout=30, bindAddress=None):
@@ -87,7 +87,7 @@ class PocketReactorCore(object):
         produers to @param name.
         """
         c = mtp.WorkConsumerConnector(name, factory, timeout, bindAddress, self.reactor, self)
-        c.connect()
+        self.reactor.callWhenRunning(c.connect)
         return c
 
     def connectWorkProducer(self, name, factory, timeout=30, bindAddress=None):
@@ -95,7 +95,7 @@ class PocketReactorCore(object):
         Send messages to be processed (distributed) to @param name.
         """
         c = mtp.WorkProducerConnector(name, factory, timeout, bindAddress, self.reactor, self)
-        c.connect()
+        self.reactor.callWhenRunning(c.connect)
         return c
 
     def run(self):
@@ -193,3 +193,54 @@ class PocketReactor(PocketReactorCore):
         """
         """
         return self._writers.keys()
+
+def install():
+    """
+    Make a singleton of the preactor.
+    Get configuration from conf file.
+    If no local conf file (dir magnet started in), fallback on .magnet.conf
+    in users home dir.
+    If no conf in users home, fallback on magnet.conf in magnet python
+    package.
+    """
+    import os
+    import sys
+    import ConfigParser
+    import magnet
+    pkg_conf = os.path.join(magnet.__path__[0], 'magnet.conf')
+    home_path = os.path.expanduser('~')
+    home_conf = os.path.join(home_path, '.magnet.conf') # @todo hardcoded filename
+    # see if there is a conf file in the cur dir
+    local_conf = os.path.join(os.path.abspath('.'), 'magnet.conf')
+    c = ConfigParser.ConfigParser()
+    confs_read = c.read([pkg_conf, home_conf, local_conf])
+    if not confs_read:
+        raise Exception("""No magnet.conf file located!! This is where\
+                necessary AMQP Broker configuration is looked up.""")
+
+    from twisted.internet import reactor
+    from magnet.amqp import AMQPClientCreator
+    
+    username = c.get('amqp_broker', 'username')
+    password = c.get('amqp_broker', 'password')
+    vhost = c.get('amqp_broker', 'vhost')
+    clientCreator = AMQPClientCreator(reactor, username=username,
+                                    password=password, vhost=vhost)
+
+    broker_host = c.get('amqp_broker', 'host')
+    broker_port = int(c.get('amqp_broker', 'port'))
+    # amqp_client = yield clientCreator.connectTCP(broker_host, broker_port)
+    amqp_client_d = clientCreator.connectTCP(broker_host, broker_port)
+
+    p_reactor = PocketReactor(reactor, amqp_client_d)
+
+    assert not sys.modules.has_key('magnet.preactor'), "preactor already installed"
+    import magnet
+    magnet.preactor = p_reactor
+    sys.modules['magnet.preactor'] = p_reactor
+
+
+
+
+
+

@@ -1,3 +1,4 @@
+import sys
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
@@ -9,13 +10,8 @@ from twisted.web.client import HTTPClientFactory
 from twisted.web import server, proxy, resource, static
 from twisted.python import log
 
-from magnet.amqp import AMQPClientCreator
-from magnet.core import PocketReactor
 
-BROKER_HOST = 'amoeba.ucsd.edu'
-BROKER_PORT = 5672
-
-
+log.startLogging(sys.stdout)
 
 class AddProtocol(basic.LineReceiver):
 
@@ -37,17 +33,15 @@ class AddFactory(protocol.ServerFactory):
 
 
 @inlineCallbacks
-def main(reactor):
-    clientCreator = AMQPClientCreator(reactor)
-    client = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
-
-    p_reactor = PocketReactor(reactor, client)
+def main():
+    from magnet.preactor import Preactor
+    preactor = yield Preactor()
 
     f = AddFactory()
 
-    p_reactor.listenMS('add-service', f)
-    p_reactor.run()
+    preactor.listenMS('add-service', f)
+    preactor.run()
 
 if __name__ == '__main__':
-    main(reactor)
+    main()
     reactor.run()

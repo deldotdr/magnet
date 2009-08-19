@@ -9,13 +9,8 @@ from twisted.protocols import basic
 from twisted.python import log
 
 
-from magnet.amqp import AMQPClientCreator
-from magnet.core import PocketReactor
 from magnet.protocol import ClientCreator
 
-BROKER_HOST = 'amoeba.ucsd.edu'
-BROKER_HOST = 'localhost'
-BROKER_PORT = 5672
 
 log.startLogging(sys.stdout)
 
@@ -45,17 +40,12 @@ def sleep_time(client):
 
 
 @inlineCallbacks
-def main(reactor):
-    # ClientCreator for AMQP client (this will disappear from view
-    # eventually. Don't confuse it with the ClientCreator you (the app
-    # developer) wants to use
-    clientCreator = AMQPClientCreator(reactor)
-    client = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
-
-    p_reactor = PocketReactor(reactor, client)
+def main():
+    from magnet.preactor import Preactor
+    preactor = yield Preactor()
 
     # ClientCreator for connectMS
-    client_creator = ClientCreator(reactor, p_reactor, FactorClient)
+    client_creator = ClientCreator(reactor, preactor, FactorClient)
     d = client_creator.connectWorkProducer('factor')
     factor_client = yield d
     
@@ -64,10 +54,10 @@ def main(reactor):
     l = task.LoopingCall(sleep_time, factor_client)
     l.start(1)
 
-    p_reactor.run()
+    preactor.run()
 
 
 
 if __name__ == '__main__':
-    main(reactor)
+    main()
     reactor.run()

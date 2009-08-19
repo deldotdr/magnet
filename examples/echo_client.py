@@ -8,13 +8,7 @@ from twisted.python import log
 
 log.startLogging(sys.stdout)
 
-from magnet.amqp import AMQPClientCreator
-from magnet.core import PocketReactor
 
-BROKER_HOST = 'amoeba.ucsd.edu'
-BROKER_PORT = 5672
-
-# log.startLogging(log.StdioOnnaStick())
 
 class MSClient(protocol.Protocol):
 
@@ -29,18 +23,16 @@ class MSClientFactory(protocol.ClientFactory):
     protocol = MSClient
 
 @inlineCallbacks
-def main(reactor):
-    clientCreator = AMQPClientCreator(reactor)
-    client = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
-
-    p_reactor = PocketReactor(reactor, client)
+def main():
+    from magnet.preactor import Preactor
+    preactor = yield Preactor()
 
     f = MSClientFactory()
-    p_reactor.connectMS('echo-server', f)
-    p_reactor.run()
+    preactor.connectMS('echo-server', f)
+    preactor.run()
 
 
 
 if __name__ == '__main__':
-    main(reactor)
+    main()
     reactor.run()

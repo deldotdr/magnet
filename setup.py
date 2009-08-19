@@ -9,6 +9,6 @@ setup(name='magnet',
         author_email='deldotdr@gmail.com',
         packages=['magnet'],
         package_data={
-            'magnet':['spec/*.xml'],
+            'magnet':['magnet.conf', 'spec/*.xml'],
             }
         )
