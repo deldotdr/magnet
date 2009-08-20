@@ -11,9 +11,8 @@ from twisted.python import log
 
 
 from magnet.protocol import ClientCreator
+from magnet.protocol import LogProtocol
 
-
-log.startLogging(sys.stdout)
 
 class WorkClient(basic.LineReceiver):
     def __init__(self):
@@ -24,7 +23,7 @@ class WorkClient(basic.LineReceiver):
         self.sendLine(to_send)
 
     def lineReceived(self, line):
-        print 'Received: ', line
+        log.msg('Received: %s', line)
 
 
 def sleep_time(client):
@@ -33,7 +32,7 @@ def sleep_time(client):
 
 
 @inlineCallbacks
-def main():
+def main(application):
     from magnet.preactor import Preactor
     preactor = yield Preactor()
 
@@ -45,9 +44,19 @@ def main():
     l = task.LoopingCall(sleep_time, work_client)
     l.start(1)
 
+    log_context = "work_producer"
+    LogProtocol.log_context = log_context
+
+    log_client_creator = ClientCreator(reactor, preactor, LogProtocol)
+    log_client = yield log_client_creator.connectWorkProducer('log')
+    log_client.sendLog('testing')
+
+    # application.setComponent(log.ILogObserver, log_client.sendLog)
+    log.addObserver(log_client.sendLog)
+
     preactor.run()
 
 
 
 application = service.Application('workproducer')
-main()
+main(application)

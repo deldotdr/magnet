@@ -115,7 +115,6 @@ class BasePocket(object, log.Logger):
           - immediate, detect lost peer
           - mandatory, make sure msg is routed to a queue
         """
-        log.msg('sendMessage', payload)
         props.update({'type':'app_msg'}) 
         content = Content(payload, properties=props)
         self.channel.basic_publish(exchange=self.send_exchange,

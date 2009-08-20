@@ -8,11 +8,12 @@ from twisted.internet.defer import inlineCallbacks
 from twisted.internet import protocol
 from twisted.protocols import basic
 from twisted.internet import task
-
 from twisted.python import log
 
+from magnet.protocol import ClientCreator
+from magnet.protocol import LogProtocol
 
-# log.startLogging(sys.stdout)
+
 
 class WorkProtocol(basic.LineReceiver):
 
@@ -34,14 +35,24 @@ class WorkFactory(protocol.ClientFactory):
 
 
 @inlineCallbacks
-def main():
+def main(application):
     from magnet.preactor import Preactor
     preactor = yield Preactor()
 
-    f = FactorFactory()
+    f = WorkFactory()
 
     preactor.connectWorkConsumer('work', f)
+
+    log_context = "work_consumer"
+    LogProtocol.log_context = log_context
+
+    log_client_creator = ClientCreator(reactor, preactor, LogProtocol)
+    log_client = yield log_client_creator.connectWorkProducer('log')
+
+    # application.setComponent(log.ILogObserver, log_client.sendLog)
+    log.addObserver(log_client.sendLog)
+
     preactor.run()
 
 application = service.Application('worker')
-main()
+main(application)

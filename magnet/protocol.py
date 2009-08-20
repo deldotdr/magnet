@@ -8,6 +8,8 @@
 
 from twisted.internet import defer
 from twisted.internet.protocol import _InstanceFactory
+from twisted.protocols import basic
+from twisted.python import log
 
 
 class ClientCreator(object):
@@ -51,7 +53,7 @@ class ClientCreator(object):
         """
         d = defer.Deferred()
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
-        self.p_reactor.connectWorkConsummer(name, f, timeout=timeout, bindAddress=bindName)
+        self.p_reactor.connectWorkConsumer(name, f, timeout=timeout, bindAddress=bindName)
         return d
 
     def connectWorkProducer(self, name, timeout=30, bindName=None):
@@ -65,3 +67,22 @@ class ClientCreator(object):
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
         self.p_reactor.connectWorkProducer(name, f, timeout=timeout, bindAddress=bindName)
         return d
+
+
+class LogProtocol(basic.NetstringReceiver):
+
+    log_context = ''
+
+    def sendLog(self, event):
+        """
+        Send log event as string.
+        """
+        log_msg = "Context:%s event:%s" % (self.log_context, str(event))
+        self.sendString(log_msg)
+
+    def stringReceived(self, log_str):
+        """receive remote log
+        """
+        log.msg(log_str)
+        # Need this until new message pattern implemented
+        self.transport.ack()
