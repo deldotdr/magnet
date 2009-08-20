@@ -1,1 +1,2 @@
-git archive --format=tar --prefix=misted/ HEAD | gzip > misted-latest.tar.gz
+git archive --format=tar --prefix=magnet/ HEAD | gzip > magnet-latest.tar.gz
+scp magnet-latest.tar.gz amoeba:~/cpe/resources
