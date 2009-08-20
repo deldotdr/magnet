@@ -1,8 +1,6 @@
 import sys
 import time
 
-from sympy import factorint
-
 from twisted.application import internet
 from twisted.application import service
 from twisted.internet import reactor
@@ -16,32 +14,23 @@ from twisted.python import log
 
 # log.startLogging(sys.stdout)
 
-class Factor(basic.LineReceiver):
+class WorkProtocol(basic.LineReceiver):
 
     def lineReceived(self, line):
         try:
-            # self.factor(line)
-            self.sleep(line)
+            self.do_work(line)
         except:
-            log.err('Factor error')
+            log.err('Work error')
             return
         self.transport.ack()
 
-    def factor(self, n):
-        """Simple example of specific protocol functionality
-        """
-        log.msg('Factor ', n)
-        f = factorint(long(n))
-        log.msg('Factors: ', str(f))
-        return 
-
-    def sleep(self, t):
-        log.msg("Sleep ", int(t))
-        time.sleep(int(t))
+    def do_work(self, work):
+        log.msg("Doing work... ", int(work))
+        time.sleep(int(work))
         return
 
-class FactorFactory(protocol.ClientFactory):
-    protocol = Factor
+class WorkFactory(protocol.ClientFactory):
+    protocol = WorkProtocol
 
 
 @inlineCallbacks

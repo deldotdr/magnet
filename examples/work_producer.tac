@@ -15,15 +15,11 @@ from magnet.protocol import ClientCreator
 
 log.startLogging(sys.stdout)
 
-class FactorClient(basic.LineReceiver):
+class WorkClient(basic.LineReceiver):
     def __init__(self):
         self.count = 0
 
-    def factor(self, n):
-        to_send = str(n)
-        self.sendLine(to_send)
-
-    def sleep(self, t):
+    def do_work(self, t):
         to_send = str(t)
         self.sendLine(to_send)
 
@@ -31,13 +27,9 @@ class FactorClient(basic.LineReceiver):
         print 'Received: ', line
 
 
-def factor_int(client, order=155):
-    n = random.randint(2**order, 2**(order+2))
-    client.factor(n)
-
 def sleep_time(client):
     t = random.randint(1, 5)
-    client.sleep(t)
+    client.do_work(t)
 
 
 @inlineCallbacks
@@ -46,13 +38,11 @@ def main():
     preactor = yield Preactor()
 
     # ClientCreator for connectMS
-    client_creator = ClientCreator(reactor, preactor, FactorClient)
+    client_creator = ClientCreator(reactor, preactor, WorkClient)
     d = client_creator.connectWorkProducer('work')
-    factor_client = yield d
+    work_client = yield d
     
-
-    # l = task.LoopingCall(factor_int, factor_client)
-    l = task.LoopingCall(sleep_time, factor_client)
+    l = task.LoopingCall(sleep_time, work_client)
     l.start(1)
 
     preactor.run()
