@@ -66,6 +66,18 @@ class PocketReactorCore(object):
         p.dynamo = self
         return p
 
+    def simple_consumer_pocket(self):
+        chan = self.client.channel()
+        p = pocket.SimpleConsumer(chan, self.debug)
+        p.dynamo = self
+        return p
+
+    def simple_producer_pocket(self):
+        chan = self.client.channel()
+        p = pocket.SimpleProducer(chan, self.debug)
+        p.dynamo = self
+        return p
+
     def listenMS(self, addr, factory, backlog=50):
         """Connects given factory to the given message service address.
         """
@@ -95,6 +107,23 @@ class PocketReactorCore(object):
         Send messages to be processed (distributed) to @param name.
         """
         c = mtp.WorkProducerConnector(name, factory, timeout, bindAddress, self.reactor, self)
+        self.reactor.callWhenRunning(c.connect)
+        return c
+
+    def connectSimpleConsumer(self, name, factory, timeout=30, bindAddress=None):
+        """
+        Configure a worker application to receive messages sent by work
+        produers to @param name.
+        """
+        c = mtp.SimpleConsumerConnector(name, factory, timeout, bindAddress, self.reactor, self)
+        self.reactor.callWhenRunning(c.connect)
+        return c
+
+    def connectSimpleProducer(self, name, factory, timeout=30, bindAddress=None):
+        """
+        Send messages to be processed (distributed) to @param name.
+        """
+        c = mtp.SimpleProducerConnector(name, factory, timeout, bindAddress, self.reactor, self)
         self.reactor.callWhenRunning(c.connect)
         return c
 

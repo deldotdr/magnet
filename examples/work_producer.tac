@@ -20,6 +20,7 @@ class WorkClient(basic.LineReceiver):
 
     def do_work(self, t):
         to_send = str(t)
+        log.msg('Produced work %s' % to_send)
         self.sendLine(to_send)
 
     def lineReceived(self, line):
@@ -48,7 +49,7 @@ def main(application):
     LogProtocol.log_context = log_context
 
     log_client_creator = ClientCreator(reactor, preactor, LogProtocol)
-    log_client = yield log_client_creator.connectWorkProducer('log')
+    log_client = yield log_client_creator.connectSimpleProducer('log')
     log_client.sendLog('testing')
 
     # application.setComponent(log.ILogObserver, log_client.sendLog)

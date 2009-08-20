@@ -123,6 +123,12 @@ class BasePocket(object, log.Logger):
                                     immediate=self.immediate,
                                     mandatory=self.mandatory)
 
+    def ack(self):
+        """
+        Does nothing here. Used in Work Consumer.
+        """
+        pass
+
     def _set_send_address(self, exchange, routing_key):
         """
         """
@@ -566,4 +572,139 @@ class WorkProducer(WorkerPatternBase):
 
     def write_ready(self):
         return self.can_write
+
+class SimplePatternBase(BasePocket):
+    """
+    Mixin, most useful for toggling development mode of amqp worker queue
+    parameters.
+    """
+
+    def __init__(self, channel, debug=False):
+        BasePocket.__init__(self, channel, debug)
+        self.logstr = self.__class__.__name__
+
+        self.last_delivery = None
+
+        self.mandatory = False
+        self.immediate = False
+        self.can_write = False
+
+        self.pfetch_size = 1
+        self.pfetch_count = 1
+
+        # no difference for these in this pattern
+        if debug:
+            self.auto_delete_q = True
+            self.auto_delete_ex = True
+            self.durable = True
+        else:
+            self.auto_delete_q = True
+            self.auto_delete_ex = False
+            self.durable = True
+
+class SimpleConsumer(SimplePatternBase):
+    """
+    Simple general use, un-reliable..
+    no_ack=True (basic_consume)
+    qos still one.
+    """
+
+
+    @defer.inlineCallbacks
+    def bind(self, name):
+        """Hack to minimize changes to BaseClient..it expects this to be
+        deferred.
+        """
+        yield self.channel.channel_open()
+        defer.returnValue(None)
+
+
+    @defer.inlineCallbacks
+    def connect(self, name):
+        """
+        Set up a shared named work queue.
+        @note These idempotent config commands are unnecessary once one
+        worker is active, it is necessary, however, for this
+        general procedure to always config the queue.
+        """
+        reply = yield self.channel.queue_declare(auto_delete=self.auto_delete_q)
+        yield self.channel.exchange_declare(exchange=name, 
+                                        type='topic',
+                                        durable=self.durable,
+                                        auto_delete=self.auto_delete_ex)
+        # If queue and routing key empty, routing key will be the current
+        # queue for the channel, which is the last declared queue
+        # nowait=False, make sure it works...
+        yield self.channel.queue_bind(queue=reply.queue, exchange=name, routing_key=name)
+        yield self.channel.basic_qos(prefetch_count=self.pfetch_count)
+        yield self.channel.basic_consume(queue=reply.queue, no_ack=True)
+        defer.returnValue(None)
+
+    def pocket_app_msg(self, amqp_msg):
+        """
+        @todo Check amqp headers. See if deliver ack is needed.
+        """
+        data = amqp_msg.content.body
+        self.last_delivery = amqp_msg.delivery_tag
+        self._recv_buff.append(data)
+
+    def recv(self):
+        """
+        """
+        data = self._recv_buff.pop(0)
+        return data
+
+    # @defer.inlineCallbacks
+    def ack(self):
+        """Basic ack prototype
+        """
+        if self.last_delivery:
+            self.channel.basic_ack(delivery_tag=self.last_delivery)
+            self.last_delivery = None
+
+
+class SimpleProducer(SimplePatternBase):
+    """Send all messages to a name.
+    The name represents a shared queue.
+    The pocket should verify published messages are queued by waiting for
+    the queue to ack. It will then be the responsibility of the queue to
+    ensure the message is processed by a worker.
+    """
+
+
+    @defer.inlineCallbacks
+    def bind(self, name):
+        """Hack to minimize changes to BaseClient..it expects this to be
+        deferred.
+        """
+        yield self.channel.channel_open()
+        defer.returnValue(None)
+
+    @defer.inlineCallbacks
+    def connect(self, name):
+        """Set up exchange and shared named work queue (for worker
+        counterpart).
+        @note These idempotent config commands are unnecessary once one
+        worker is active, it is necessary, however, for this
+        general procedure to always config the queue.
+        @note The WorkConsumer applies the same configuration.
+        @todo Introduce another element in the system responsible for this
+        configuration.
+        """
+        self._set_send_address(name, name)
+        # yield self.channel.queue_declare(queue=name, auto_delete=self.auto_delete)
+        yield self.channel.exchange_declare(exchange=name, 
+                                        type='topic',
+                                        durable=self.durable,
+                                        auto_delete=self.auto_delete_ex)
+        # If queue and routing key empty, routing key will be the current
+        # queue for the channel, which is the last declared queue
+        # nowait=False, make sure it works...
+        # yield self.channel.queue_bind(exchange=name)
+        self.can_write = True
+        defer.returnValue(None)
+
+    def write_ready(self):
+        return self.can_write
+
 

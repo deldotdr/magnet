@@ -47,7 +47,7 @@ def main(application):
     LogProtocol.log_context = log_context
 
     log_client_creator = ClientCreator(reactor, preactor, LogProtocol)
-    log_client = yield log_client_creator.connectWorkProducer('log')
+    log_client = yield log_client_creator.connectSimpleProducer('log')
 
     # application.setComponent(log.ILogObserver, log_client.sendLog)
     log.addObserver(log_client.sendLog)

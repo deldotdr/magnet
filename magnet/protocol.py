@@ -68,6 +68,24 @@ class ClientCreator(object):
         self.p_reactor.connectWorkProducer(name, f, timeout=timeout, bindAddress=bindName)
         return d
 
+    def connectSimpleConsumer(self, name, timeout=30, bindName=None):
+        """
+        Simple Consumer
+        """
+        d = defer.Deferred()
+        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
+        self.p_reactor.connectSimpleConsumer(name, f, timeout=timeout, bindAddress=bindName)
+        return d
+
+    def connectSimpleProducer(self, name, timeout=30, bindName=None):
+        """
+        Simple Producer
+        """
+        d = defer.Deferred()
+        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
+        self.p_reactor.connectSimpleProducer(name, f, timeout=timeout, bindAddress=bindName)
+        return d
+
 
 class LogProtocol(basic.NetstringReceiver):
 

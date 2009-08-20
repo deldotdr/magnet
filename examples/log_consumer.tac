@@ -23,7 +23,7 @@ def main(application):
 
 
     log_client_creator = ClientCreator(reactor, preactor, LogProtocol)
-    log_client = yield log_client_creator.connectWorkConsumer('log')
+    log_client = yield log_client_creator.connectSimpleConsumer('log')
 
     preactor.run()
 

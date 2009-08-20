@@ -148,6 +148,11 @@ class Connection(AbstractDescriptor):
     def logPrefix(self):
         return self.logstr
 
+    def ack(self):
+        """
+        """
+        pass
+
 
 class BaseClient(Connection):
     """Base client for MS connections
@@ -504,4 +509,38 @@ class WorkProducerConnector(Connector):
     def _makeTransport(self):
         return WorkProducerClient(self.addr, self.bindAddress, self, self.reactor, self.dynamo)
 
+
+class SimpleConsumerClient(Client):
+
+    def createMessagingPocket(self):
+        """
+        make an instance of AbstractMessageChannel, passing it a active
+        msgsrv object
+        """
+        pkt = self.dynamo.simple_consumer_pocket()
+        return pkt
+
+    def ack(self):
+        """
+        Prototype for acknowledging work message was successfully processed.
+        """
+        self.pocket.ack()
+
+class SimpleConsumerConnector(Connector):
+    def _makeTransport(self):
+        return SimpleConsumerClient(self.addr, self.bindAddress, self, self.reactor, self.dynamo)
+
+class SimpleProducerClient(Client):
+
+    def createMessagingPocket(self):
+        """
+        make an instance of AbstractMessageChannel, passing it a active
+        msgsrv object
+        """
+        pkt = self.dynamo.simple_producer_pocket()
+        return pkt
+
+class SimpleProducerConnector(Connector):
+    def _makeTransport(self):
+        return SimpleProducerClient(self.addr, self.bindAddress, self, self.reactor, self.dynamo)
 
