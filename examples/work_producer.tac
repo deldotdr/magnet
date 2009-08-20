@@ -1,6 +1,7 @@
 import sys
 import random
 
+from twisted.application import service
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet import protocol
@@ -58,6 +59,5 @@ def main():
 
 
 
-if __name__ == '__main__':
-    main()
-    reactor.run()
+application = service.Application('workproducer')
+main()

@@ -44,11 +44,11 @@ class FactorFactory(protocol.ClientFactory):
 @inlineCallbacks
 def main():
     from magnet.preactor import Preactor
-    preactor = Preactor()
+    preactor = yield Preactor()
 
     f = FactorFactory()
 
-    preactor.connectWorkConsumer('factor', f)
+    preactor.connectWorkConsumer('work', f)
     preactor.run()
 
 if __name__ == '__main__':

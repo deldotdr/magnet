@@ -51,7 +51,7 @@ def main():
 
     f = FactorFactory()
 
-    preactor.connectWorkConsumer('factor', f)
+    preactor.connectWorkConsumer('work', f)
     preactor.run()
 
 application = service.Application('worker')
