@@ -49,7 +49,6 @@ def main():
     f = FactorFactory()
 
     preactor.connectWorkConsumer('work', f)
-    preactor.run()
 
 if __name__ == '__main__':
     main()

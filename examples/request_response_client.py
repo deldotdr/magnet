@@ -8,18 +8,17 @@ from twisted.protocols import basic
 
 
 from magnet.protocol import ClientCreator
+from magnet.protocol import RequestResponseLineReceiver
 
 
 log.startLogging(sys.stdout)
 
-class AddClient(basic.LineReceiver):
+class AddClient(RequestResponseLineReceiver):
 
     def add(self, a, b):
         to_send = 'add, %d, %d' % (a, b)
-        self.sendLine(to_send)
+        return self.makeRequest(to_send)
 
-    def lineReceived(self, line):
-        print 'Result: ', line
 
 
 
@@ -34,9 +33,11 @@ def main():
     add_client = yield d
     
     # use client
-    add_client.add(2, 2)
-    add_client.add(23, 2)
-    add_client.add(1000, 99999)
+    ans = yield add_client.add(2, 2)
+    log.msg('resopnse: %s' % ans)
+
+    ans = yield add_client.add(5, 2)
+    log.msg('resopnse: %s' % ans)
 
 
 

@@ -30,7 +30,6 @@ def main():
     f.deferred.addCallback(show_page)
 
     preactor.connectMS('test-http-server', f)
-    preactor.run()
 
 
 

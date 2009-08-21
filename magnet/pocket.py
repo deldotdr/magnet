@@ -97,9 +97,8 @@ class BasePocket(object, log.Logger):
     def messageReceived(self, msg):
         """txAMQP delegate calls this
         """
-        log.msg('messageReceived', msg.content.properties)
         if not msg.content.properties.has_key('type'):
-            log.msg('Message has no control type!')
+            log.err('Message has no control type!')
             raise KeyError('Message has no control type!')
         control_method = msg.content.properties['type']
         if not hasattr(self, 'pocket_%s' % control_method):

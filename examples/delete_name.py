@@ -12,9 +12,8 @@ def main():
     preactor = yield Preactor()
 
     pkt = preactor.pocket()
-    pkt.delete_name('factor')
-
-    preactor.run()
+    pkt.delete_name('log')
+    # pkt.purge_name('log')
 
 
 

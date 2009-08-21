@@ -54,7 +54,6 @@ def main():
     l = task.LoopingCall(sleep_time, factor_client)
     l.start(1)
 
-    preactor.run()
 
 
 

@@ -104,3 +104,22 @@ class LogProtocol(basic.NetstringReceiver):
         log.msg(log_str)
         # Need this until new message pattern implemented
         self.transport.ack()
+
+class RequestResponseLineReceiver(basic.LineReceiver):
+    """
+    """
+
+    def __init__(self):
+        self.deferred = None
+
+    def makeRequest(self, request):
+        """
+        """
+        self.sendLine(request)
+        self.deferred = defer.Deferred()
+        return self.deferred
+
+
+    def lineReceived(self, line):
+        if self.deferred:
+            self.deferred.callback(line)

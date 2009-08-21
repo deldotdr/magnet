@@ -16,7 +16,6 @@ def main():
     f = server.Site(proxy.ReverseProxyResource('amoeba.ucsd.edu', 80, ''))
 
     preactor.listenMS('test-http-server', f)
-    preactor.run()
 
 if __name__ == '__main__':
     main()

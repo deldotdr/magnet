@@ -48,5 +48,6 @@ def Preactor():
     amqp_client = yield clientCreator.connectTCP(broker_host, broker_port)
 
     preactor = PocketReactor(reactor, amqp_client)
+    preactor.run()
     defer.returnValue(preactor)
  

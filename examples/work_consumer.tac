@@ -52,7 +52,6 @@ def main(application):
     # application.setComponent(log.ILogObserver, log_client.sendLog)
     log.addObserver(log_client.sendLog)
 
-    preactor.run()
 
 application = service.Application('worker')
 main(application)

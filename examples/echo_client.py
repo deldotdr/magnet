@@ -29,7 +29,6 @@ def main():
 
     f = MSClientFactory()
     preactor.connectMS('echo-server', f)
-    preactor.run()
 
 
 

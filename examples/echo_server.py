@@ -28,7 +28,6 @@ def main():
     f = EchoFactory()
 
     preactor.listenMS('echo-server', f)
-    preactor.run()
 
 
 if __name__ == '__main__':

@@ -16,7 +16,7 @@ log.startLogging(sys.stdout)
 class AddProtocol(basic.LineReceiver):
 
     def lineReceived(self, line):
-        print self, self.transport, 'Add request: ', line
+        log.msg(self, self.transport, 'Add request: ', line)
         if line[0:3] == 'add':
             _, a, b = line.split(',')
             c = self.add(int(a), int(b))
@@ -40,7 +40,6 @@ def main():
     f = AddFactory()
 
     preactor.listenMS('add-service', f)
-    preactor.run()
 
 if __name__ == '__main__':
     main()
