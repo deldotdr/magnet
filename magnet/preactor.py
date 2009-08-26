@@ -7,6 +7,7 @@
 # install()
 
 from twisted.internet import defer
+from twisted.python import log
 
 @defer.inlineCallbacks
 def Preactor():
@@ -32,6 +33,8 @@ def Preactor():
     if not confs_read:
         raise Exception("""No magnet.conf file located!! This is where\
                 necessary AMQP Broker configuration is looked up.""")
+
+    log.msg("Using AMQP Broker @ %s" % c.get('amqp_broker', 'host'))
 
     from twisted.internet import reactor
     from magnet.amqp import AMQPClientCreator

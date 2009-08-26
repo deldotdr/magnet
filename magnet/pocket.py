@@ -282,7 +282,7 @@ class Bidirectional(BasePocket):
 
         # self.consumer_tag = str(uuid.uuid4())
         # yield self.channel.basic_consume(consumer_tag=self.consumer_tag)
-        yield self.channel.basic_consume()
+        yield self.channel.basic_consume(no_ack=True)
 
         self._start()
         defer.returnValue(None)
@@ -319,7 +319,7 @@ class Bidirectional(BasePocket):
     def listen(self):
         """
         """
-        yield self.channel.basic_consume()
+        yield self.channel.basic_consume(no_ack=True)
 
 
     # # # # # # # # # # # # # # # # # # # # # #  
