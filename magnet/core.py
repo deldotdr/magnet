@@ -133,6 +133,15 @@ class PocketReactorCore(object):
         """
         self.loop.start(0.001)
 
+    def stop(self):
+        """
+        Shutdown loop for pocket poll.
+        @note Calling client.close() isn't reversable. Is this the best
+        place for that?
+        """
+        self.loop.stop()
+        self.client.transport.loseConnection()
+
 def _pocket_poll(readers, writers):
     """Poll over read and write pocket objects checking for read and
     writeablity. This is the equivalent to select polling over file

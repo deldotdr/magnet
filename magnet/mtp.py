@@ -139,6 +139,8 @@ class Connection(AbstractDescriptor):
         """
         AbstractDescriptor.connectionLost(self, reason)
         protocol = self.protocol
+        pkt = self.pocket
+        pkt.close()
         del self.protocol
         del self.pocket
         protocol.connectionLost(reason)
@@ -150,8 +152,9 @@ class Connection(AbstractDescriptor):
 
     def ack(self):
         """
+        Used for some conenction types.
         """
-        pass
+        self.pocket.ack()
 
 
 class BaseClient(Connection):
@@ -416,12 +419,17 @@ class ListeningPort(BaseListeningPort):
 
     def connectionLost(self, reason):
         log.msg('(Messaging Service Listener %s Closed)' % str(self.listen_address))
-        BaseListeningPort.connectionLost(self, reason)
 
         d = None
         if hasattr(self, "deferred"):
             d = self.deferred
             del self.deferred
+
+        BaseListeningPort.connectionLost(self, reason)
+
+        self.connected = False
+        self.pocket.close()
+        del self.pocket
 
         try:
             self.factory.doStop()

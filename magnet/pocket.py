@@ -67,6 +67,7 @@ class BasePocket(object, log.Logger):
         """
         Close pocket connection.
         """
+        self.channel.channel_close()
 
     def connect(self, name):
         """
@@ -224,7 +225,7 @@ class Bidirectional(BasePocket):
             queue = reply.queue
 
         if binding:
-            yield self.channel.queue_bind(exchange=exchange, routing_key=binding)
+            yield self.channel.queue_bind(queue=queue, exchange=exchange, routing_key=binding)
             # need to set what ended up being the queue name for replys
         else:
             yield self.channel.queue_bind(exchange=exchange)
@@ -246,7 +247,7 @@ class Bidirectional(BasePocket):
         """
         @todo add connection termination
         """
-        self.channel.close()
+        self.channel.channel_close()
 
     @defer.inlineCallbacks
     def connect(self, name):
