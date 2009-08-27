@@ -172,14 +172,26 @@ class BasePocket(object, log.Logger):
 
 class Bidirectional(BasePocket):
     """
+    This Pocket is designed to mimic a tcp socket used in the
+    listing-server/connecting-client pattern.
+
+    A listening pocket listens for connection requests on a name much like
+    a listening socket listens on a port number. 
+    In the current design, name equates to a binding key and queue name
+    of the listening pocket. The listening pocket has exclusive access to
+    the named queue just as the listening socket has exclusive access to
+    the bound port number. The queue should auto delete as soon as the
+    listening consumer cancels, the channel closes, or the connection
+    disconnects. 
+
     A pocket protocol for handling connection control messages and delegating
     content messages to a buffering mechanism for the pocket.
 
 
-    The pocket control protocol deals with managing connections in an
+    @note The pocket control protocol deals with managing connections in an
     abstraction space directly above amqp channels. So far in this
     prototype, there is not much complexity beyond configuration
-    conventions. The pocket is pretty much coupled to a channel. 
+    conventions. The pocket is coupled to a channel. 
     """
 
     def __init__(self, channel):
@@ -190,9 +202,17 @@ class Bidirectional(BasePocket):
 
         self.can_write = False
 
+        # bind configuration
+        self._listen_exchange = 'amq.direct'
+        self._q_exclusive = True
+        self._q_auto_delete = True
+
         # publish configuration
         self.immediate = True
         self.mandatory = True
+
+        # consume configuration
+        self._no_ack = True
 
 
 
@@ -207,21 +227,26 @@ class Bidirectional(BasePocket):
     @defer.inlineCallbacks
     def bind(self, name):
         """Bind this pocket to the amqp address @param bind_addr.
+        @todo Remove hard-coded exchange name
         """
         # exchange = bind_addr['exchange']
         # queue = bind_addr['queue']
         # binding = bind_addr['binding']
 
-        exchange = 'amq.direct'
+        exchange = self._listen_exchange
         queue = name
         binding = name
 
         yield self.channel.channel_open()
 
         if queue:
-            yield self.channel.queue_declare(auto_delete=True, queue=queue, exclusive=True)
+            yield self.channel.queue_declare(auto_delete=self._q_auto_delete, 
+                                            queue=queue, 
+                                            exclusive=self._q_exclusive)
         else:
-            reply = yield self.channel.queue_declare(auto_delete=True, exclusive=True)
+            reply = yield
+            self.channel.queue_declare(auto_delete=self._q_auto_delete, 
+                                            exclusive=self._q_exclusive)
             queue = reply.queue
 
         if binding:
@@ -282,7 +307,7 @@ class Bidirectional(BasePocket):
 
         # self.consumer_tag = str(uuid.uuid4())
         # yield self.channel.basic_consume(consumer_tag=self.consumer_tag)
-        yield self.channel.basic_consume(no_ack=True)
+        yield self.channel.basic_consume(no_ack=self._no_ack)
 
         self._start()
         defer.returnValue(None)
@@ -303,7 +328,8 @@ class Bidirectional(BasePocket):
 
         yield self.channel.channel_open()
 
-        reply = yield self.channel.queue_declare(auto_delete=True, exclusive=True)
+        reply = yield self.channel.queue_declare(auto_delete=self._q_auto_delete,
+                                                exclusive=self._q_exclusive)
         yield self.channel.queue_bind(exchange=exchange)
 
         queue = reply.queue
@@ -311,7 +337,7 @@ class Bidirectional(BasePocket):
 
         self._set_receive_address(exchange, binding, queue)
 
-        yield self.channel.basic_consume()
+        yield self.channel.basic_consume(no_ack=self._no_ack)
         defer.returnValue(None)
 
     
@@ -319,7 +345,7 @@ class Bidirectional(BasePocket):
     def listen(self):
         """
         """
-        yield self.channel.basic_consume(no_ack=True)
+        yield self.channel.basic_consume(no_ack=self._no_ack)
 
 
     # # # # # # # # # # # # # # # # # # # # # #  
@@ -577,6 +603,8 @@ class SimplePatternBase(BasePocket):
     """
     Mixin, most useful for toggling development mode of amqp worker queue
     parameters.
+
+    @note durable exchanges survive server restart
     """
 
     def __init__(self, channel, debug=False):
@@ -584,6 +612,8 @@ class SimplePatternBase(BasePocket):
         self.logstr = self.__class__.__name__
 
         self.last_delivery = None
+
+        self.exchange_type = 'topic'
 
         self.mandatory = False
         self.immediate = False
@@ -622,21 +652,17 @@ class SimpleConsumer(SimplePatternBase):
     @defer.inlineCallbacks
     def connect(self, name):
         """
-        Set up a shared named work queue.
-        @note These idempotent config commands are unnecessary once one
-        worker is active, it is necessary, however, for this
-        general procedure to always config the queue.
         """
         reply = yield self.channel.queue_declare(auto_delete=self.auto_delete_q)
         yield self.channel.exchange_declare(exchange=name, 
-                                        type='topic',
+                                        type=self.exchange_type,
                                         durable=self.durable,
                                         auto_delete=self.auto_delete_ex)
         # If queue and routing key empty, routing key will be the current
         # queue for the channel, which is the last declared queue
         # nowait=False, make sure it works...
         yield self.channel.queue_bind(queue=reply.queue, exchange=name, routing_key=name)
-        yield self.channel.basic_qos(prefetch_count=self.pfetch_count)
+        # yield self.channel.basic_qos(prefetch_count=self.pfetch_count)
         yield self.channel.basic_consume(queue=reply.queue, no_ack=True)
         defer.returnValue(None)
 
@@ -653,14 +679,6 @@ class SimpleConsumer(SimplePatternBase):
         """
         data = self._recv_buff.pop(0)
         return data
-
-    # @defer.inlineCallbacks
-    def ack(self):
-        """Basic ack prototype
-        """
-        if self.last_delivery:
-            self.channel.basic_ack(delivery_tag=self.last_delivery)
-            self.last_delivery = None
 
 
 class SimpleProducer(SimplePatternBase):
@@ -694,7 +712,7 @@ class SimpleProducer(SimplePatternBase):
         self._set_send_address(name, name)
         # yield self.channel.queue_declare(queue=name, auto_delete=self.auto_delete)
         yield self.channel.exchange_declare(exchange=name, 
-                                        type='topic',
+                                        type=self.exchange_type,
                                         durable=self.durable,
                                         auto_delete=self.auto_delete_ex)
         # If queue and routing key empty, routing key will be the current
