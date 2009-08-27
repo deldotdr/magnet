@@ -219,7 +219,7 @@ class Bidirectional(BasePocket):
         yield self.channel.channel_open()
 
         if queue:
-            yield self.channel.queue_declare(queue=queue, exclusive=True)
+            yield self.channel.queue_declare(auto_delete=True, queue=queue, exclusive=True)
         else:
             reply = yield self.channel.queue_declare(auto_delete=True, exclusive=True)
             queue = reply.queue
