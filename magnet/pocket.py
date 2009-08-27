@@ -244,8 +244,7 @@ class Bidirectional(BasePocket):
                                             queue=queue, 
                                             exclusive=self._q_exclusive)
         else:
-            reply = yield
-            self.channel.queue_declare(auto_delete=self._q_auto_delete, 
+            reply = yield self.channel.queue_declare(auto_delete=self._q_auto_delete, 
                                             exclusive=self._q_exclusive)
             queue = reply.queue
 
