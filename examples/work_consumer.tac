@@ -14,6 +14,8 @@ from magnet.protocol import ClientCreator
 from magnet.protocol import LogProtocol
 
 
+obsrv = log.PythonLoggingObserver()
+obsrv.start()
 
 class WorkProtocol(basic.LineReceiver):
 
@@ -37,11 +39,12 @@ class WorkFactory(protocol.ClientFactory):
 @inlineCallbacks
 def main(application):
     from magnet.preactor import Preactor
-    preactor = yield Preactor()
+    preactor = yield Preactor(log)
 
     f = WorkFactory()
 
     preactor.connectWorkConsumer('work', f)
+
 
     log_context = "work_consumer"
     LogProtocol.log_context = log_context

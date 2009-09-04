@@ -12,7 +12,8 @@ def main():
     preactor = yield Preactor()
 
     pkt = preactor.pocket()
-    pkt.delete_name('log')
+    pkt.delete_name('dxCacheController')
+    # pkt.purge_name('dxCacheController')
     # pkt.purge_name('log')
 
 
