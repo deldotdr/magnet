@@ -13,8 +13,8 @@ def main():
 
     pkt = preactor.pocket()
     pkt.delete_name('dxFetcher')
+    # pkt.purge_name('dxCacheController')
     # pkt.purge_name('log')
-
 
 
 if __name__ == '__main__':

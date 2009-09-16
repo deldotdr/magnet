@@ -37,6 +37,21 @@ Magnet provides two major things:
       pocket:"message transport"::socket:TCP/IP
   b) completely encapsulates and abstracts AMQP 
 
+A special second reactor, the preactor, is needed to drive the event
+framework (as they are not true file descriptors).
+
+@section Communication between two applications
+
+Communications between any two apps must use complimentary magnet
+connection patterns.
+
+         A                      B           |
+---------------------   ---------------------
+listenMs                connectMs
+connectWorkProducer     connectWorkConsumer
+connectSimpleProducer   connectSimpleConsumer
+
+
 @section code Sample code
 @code
 from twisted.internet import defer

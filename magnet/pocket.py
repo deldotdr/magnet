@@ -545,6 +545,9 @@ class WorkConsumer(WorkerPatternBase):
         data = self._recv_buff.pop(0)
         return data
 
+    def send(self, data):
+        pass
+
     # @defer.inlineCallbacks
     def ack(self):
         """Basic ack prototype
@@ -679,6 +682,8 @@ class SimpleConsumer(SimplePatternBase):
         data = self._recv_buff.pop(0)
         return data
 
+    def send(self, data):
+        pass
 
 class SimpleProducer(SimplePatternBase):
     """Send all messages to a name.

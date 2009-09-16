@@ -13,7 +13,10 @@ from twisted.python import log
 from magnet.protocol import ClientCreator
 from magnet.protocol import LogProtocol
 
+from service import MSWorkConsumer
 
+# obsrv = log.PythonLoggingObserver()
+# obsrv.start()
 
 class WorkProtocol(basic.LineReceiver):
 
@@ -41,7 +44,9 @@ def main(application):
 
     f = WorkFactory()
 
-    preactor.connectWorkConsumer('work', f)
+    # preactor.connectWorkConsumer('work', f)
+    MSWorkConsumer('work', f, preactor).setServiceParent(service.IServiceCollection(application))
+
 
     log_context = "work_consumer"
     LogProtocol.log_context = log_context
