@@ -12,7 +12,7 @@ def main():
     preactor = yield Preactor()
 
     pkt = preactor.pocket()
-    pkt.delete_name('log')
+    pkt.delete_name('dxFetcher')
     # pkt.purge_name('log')
 
 
