@@ -19,6 +19,7 @@ BROKER_PORT = 5672
 class MSTests(unittest.TestCase):
 
     def setUp(self):
+        self.timeout = 2
         pass
 
     def tearDown(self):
@@ -34,7 +35,3 @@ class MSTests(unittest.TestCase):
         f = HTTPClientFactory('http://google.com')
         c = fog.connectMS('test-http-server', f, timeout=None, from_addr='test-adapter',
             reactor=reactor, msgsrv=msgsrv)
-
-
-
-
