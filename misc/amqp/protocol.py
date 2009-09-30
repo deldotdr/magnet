@@ -92,15 +92,5 @@ class Demultiplexer(object):
     """
 
 
-    def routeMethod(self, method):
-
-
-
-
-
-
-
-
-
 
 

@@ -26,10 +26,7 @@ from decimal import Decimal
 from struct import pack, unpack
 from time import mktime
 
-try:
-    from cStringIO import StringIO
-except:
-    from StringIO import StringIO
+from cStringIO import StringIO
 
 
 DUMP_CHARS = string.letters + string.digits + string.punctuation

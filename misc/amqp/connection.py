@@ -10,7 +10,6 @@ from struct import unpack, pack
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import task 
-from twisted.python import log
 
 from method_framing import MethodReader, MethodWriter
 from serialization import AMQPWriter
