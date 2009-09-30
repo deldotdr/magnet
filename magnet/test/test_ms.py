@@ -9,10 +9,6 @@ from twisted.internet.base import DelayedCall
 
 DelayedCall.debug = True
 
-from txamqp.client import Closed
-from txamqp.queue import Empty
-from txamqp.content import Content
-
 from magnet.amqp import AMQPClientCreator
 from magnet.river import MessageService
 from magnet import fog

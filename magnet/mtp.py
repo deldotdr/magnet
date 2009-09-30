@@ -29,21 +29,19 @@ only patterns).
 @date 7/9/09
 """
 
-import sys
 
 from zope.interface import implements
 
 from twisted.internet import base
 from twisted.internet import abstract
-from twisted.internet import reactor
 from twisted.internet import defer 
 from twisted.internet import error 
 from twisted.internet import interfaces 
+from twisted.internet import main
 from twisted.python import log
 from twisted.python import failure
 from twisted.python import reflect
 from twisted.python.util import unsignedID
-from twisted.persisted import styles
 
 
 
@@ -84,6 +82,15 @@ class AbstractDescriptor(abstract.FileDescriptor):
     def stopWriting(self):
         self.dynamo.removeWriter(self)
 
+    def XloseConnection(self, _connDone=failure.Failure(main.CONNECTION_DONE)):
+        """Overwrites abstract.FileDescriptor.
+        May need to comeback and make sure all data gets writen before
+        close...
+        """
+        if self.connected and not self.disconnecting:
+            self.stopReading()
+            self.stopWriting()
+            self.connectionLost(_connDone)
 
 class Connection(AbstractDescriptor):
     """Messaging Service Connection.

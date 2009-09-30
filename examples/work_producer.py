@@ -3,7 +3,6 @@ import random
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
-from twisted.internet import protocol
 from twisted.internet import task
 from twisted.protocols import basic
 from twisted.python import log

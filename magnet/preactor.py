@@ -20,7 +20,6 @@ def Preactor():
     package.
     """
     import os
-    import sys
     import ConfigParser
     import magnet
     pkg_conf = os.path.join(magnet.__path__[0], 'magnet.conf')

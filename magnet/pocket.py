@@ -730,3 +730,16 @@ class SimpleProducer(SimplePatternBase):
         return self.can_write
 
 
+class DualHalfDuplex(BasePocket):
+    """ This pocket uses two channels, one for sending and one for
+    receiving, to create a hybrid communication pattern facilitating
+    request/response like interaction between multiple endpoints.  
+    """
+
+
+
+
+
+
+
+

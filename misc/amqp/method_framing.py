@@ -45,7 +45,7 @@ except:
 
 
 from basic_message import Message
-from exceptions import *
+# from exceptions import *
 from serialization import AMQPReader
 
 __all__ =  [

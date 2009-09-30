@@ -74,5 +74,4 @@ For more complete sample code, see add_client.py, add_server.py and the others i
 the examples directory.
 """
 
-import os
 print 'No code here, just documentation'

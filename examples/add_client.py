@@ -2,7 +2,6 @@ import sys
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
-from twisted.internet import protocol
 from twisted.python import log
 from twisted.protocols import basic
 
@@ -19,7 +18,7 @@ class AddClient(basic.LineReceiver):
         self.sendLine(to_send)
 
     def lineReceived(self, line):
-        print 'Result: ', line
+        log.msg('Result: '+ line)
 
 
 
@@ -36,6 +35,7 @@ def main():
     # use client
     add_client.add(2, 2)
     add_client.add(23, 2)
+    add_client.transport.loseConnection()
     add_client.add(1000, 99999)
 
 

@@ -13,7 +13,6 @@ from txamqp.protocol import AMQClient, AMQChannel
 from txamqp.client import TwistedDelegate
 from txamqp.queue import TimeoutDeferredQueue
 
-from twisted.python import log
 from twisted.internet import defer
 from twisted.internet import protocol
 
@@ -187,12 +186,3 @@ class AMQPClientCreator(object):
         defer.returnValue(client)
 
 
-
-if __name__ == '__main__':
-    """make this do something convenient
-    """
-    from twisted.internet import reactor
-
-    f = AMQPFactory()
-    reactor.connectTCP('amoeba.ucsd.edu', 5672, f)
-    reactor.run()

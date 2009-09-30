@@ -5,8 +5,8 @@ Provides the pocket reactor.
 @author Dorian Raymer
 @date 7/9/09
 """
-from twisted.internet import defer
 from twisted.internet import task
+from twisted.python import failure
 from twisted.python import log
 
 from magnet import mtp
@@ -195,6 +195,12 @@ class PocketReactor(PocketReactorCore):
             why = getattr(pkt, method)()
         except:
             log.err()
+        if why:
+            self._disconnectPocket(pkt, why, method=='doRead')
+
+    def _disconnectPocket(self, pkt, why, isRead):
+        self.removeWriter(pkt)
+        pkt.connectionLost(failure.Failure(why))
 
     def addReader(self, reader):
         """

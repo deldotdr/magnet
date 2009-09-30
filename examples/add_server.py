@@ -4,10 +4,7 @@ from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet import protocol
 from twisted.protocols import basic
-from twisted.internet import task
 
-from twisted.web.client import HTTPClientFactory
-from twisted.web import server, proxy, resource, static
 from twisted.python import log
 
 
