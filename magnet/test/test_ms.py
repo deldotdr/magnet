@@ -17,10 +17,10 @@ BROKER_PORT = 5672
 class MSTests(unittest.TestCase):
 
     def setUp(self):
+        self.timeout = 2
         pass
 
     def tearDown(self):
         pass
-
 
 
