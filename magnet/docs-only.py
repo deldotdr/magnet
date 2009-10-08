@@ -44,13 +44,14 @@ framework (as they are not true file descriptors).
 
 Communications between any two apps must use complimentary magnet
 connection patterns.
+<pre>
 
          A                      B           |
 ---------------------   ---------------------
 listenMs                connectMs
 connectWorkProducer     connectWorkConsumer
 connectSimpleProducer   connectSimpleConsumer
-
+</pre>
 
 @section code Sample code
 @code
