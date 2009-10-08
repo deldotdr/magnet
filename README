@@ -34,3 +34,15 @@ magnet.conf in the directory you are running from, if there is not one in
 the current directory it will then look for ~/.mangnet.conf. This allows
 you to use ~/.magnet.conf as a global configuration that can be locally
 overridden but putting a mangnet.conf in the actual run directory.
+
+
+Use two terminals. In one terminal run python add_server.py
+In a second run python add_client.py
+
+You should see interactions printed in the stdout log.
+
+Other pairs to run in the same pattern:
+echo_server.py  echo_client.py
+web_proxyserver_tunnel.py  web_client_tunnel.py (Look into what this is
+really doing, this example is a cool demonstration of the power of
+abstracting amqp as a transport)
