@@ -18,7 +18,7 @@ Pocket connections need a special reactor, the PocketReactor.
 
 The PocketReactor is the main thing an application developer will use.
 Nothing else is required outside of implementing Protocols and Factories
-with standard Twisted modules. misted.protocol provides a ClientCreator for
+with standard Twisted modules. magnet.protocol provides a ClientCreator for
 conveniently connecting client protocols/factories to the 'messaging
 service'. It accomplishes the same thing as t.i.p.ClientCreator except that
 it uses p_reactor.connectMS, instead of reactor.connectTCP, .connectUNIX,
