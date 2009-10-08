@@ -10,8 +10,6 @@ from twisted.internet.base import DelayedCall
 DelayedCall.debug = True
 
 from magnet.amqp import AMQPClientCreator
-from magnet.river import MessageService
-from magnet import fog
 
 BROKER_HOST = 'amoeba.ucsd.edu'
 BROKER_PORT = 5672
@@ -23,18 +21,6 @@ class MSTests(unittest.TestCase):
 
     def tearDown(self):
         pass
-
-    @inlineCallbacks
-    def test_httpclient(self):
-        clientCreator = AMQPClientCreator(reactor, MessageService)
-        msgsrv = yield clientCreator.connectTCP(BROKER_HOST, BROKER_PORT)
-        yield msgsrv.authenticate(clientCreator.username,
-                clientCreator.password)
-
-        f = HTTPClientFactory('http://google.com')
-        c = fog.connectMS('test-http-server', f, timeout=None, from_addr='test-adapter',
-            reactor=reactor, msgsrv=msgsrv)
-
 
 
 
