@@ -2,8 +2,10 @@
 
 from distutils.core import setup
 
+from magnet import __version__ as version
+
 setup(name='magnet',
-        version='0.3.0',
+        version=version,
         description='',
         author='Dorian Raymer', 
         author_email='deldotdr@gmail.com',

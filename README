@@ -22,8 +22,8 @@ Run examples
 ------------
 The mangnet.conf file included in the examples directory uses the AMQP
 broker running on the CI development server called amoeba.ucsd.edu.
-This is done for your convenience to see an example work with no work. 
-To run magnet using your own broker, edit the magnet.conf file accordingly. 
+This is done for your convenience to see an example run with minimal effort. 
+To run magnet using your own AMQP broker, edit the magnet.conf file accordingly. 
 The recommended broker is the RabbitMQ broker, version 1.6 or later.
 
 
@@ -32,8 +32,8 @@ the home directory of the user running programs using magnet. When the
 preactor is started in your magnet program, it will first look for a
 magnet.conf in the directory you are running from, if there is not one in
 the current directory it will then look for ~/.mangnet.conf. This allows
-you to use ~/.magnet.conf as a global configuration that can be locally
-overridden but putting a mangnet.conf in the actual run directory.
+you to use ~/.magnet.conf as a global configuration file that can be locally
+overridden by putting a mangnet.conf in the actual run directory.
 
 
 Use two terminals. In one terminal run python add_server.py
